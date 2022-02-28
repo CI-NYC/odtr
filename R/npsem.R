@@ -3,27 +3,30 @@ Npsem <- R6::R6Class(
     public = list(
         W = NULL,
         L = NULL,
-        A1 = NULL,
-        A2 = NULL,
+        A = NULL,
         Y = NULL,
-        initialize = function(W, L, A1, A2, Y) {
-            checkmate::assertCharacter(A1)
+        initialize = function(W, L, A, Y) {
+            checkmate::assertCharacter(A)
             
-            if (!missing(A2)) {
-                checkmate::assertCharacter(A2)
-                self$A2 <- A2
-            }
+            # if (!missing(A2)) {
+            #     checkmate::assertCharacter(A2)
+            #     self$A2 <- A2
+            # }
             
             if (!missing(W)) {
                 checkmate::assertCharacter(W)
                 self$W <- W
             }
             
-            checkmate::assertCharacter(Y)
-            checkmate::assertList(L, types = "character")
+            if (!missing(L)) {
+                checkmate::assertList(L, types = "character") 
+                self$L <- L
+            }
+
             
-            self$L <- L
-            self$A1 <- A1
+            checkmate::assertCharacter(Y)
+            
+            self$A <- A
             self$Y <- Y
         },
         # Get all parent nodes for a variable
@@ -37,7 +40,7 @@ Npsem <- R6::R6Class(
         },
         # Return the names of all variables
         all_vars = function() {
-            c(self$W, unlist(self$L), self$A1, self$A2, self$Y)
+            c(self$W, unlist(self$L), self$A, self$Y)
         }
     ),
     private = list(
@@ -45,13 +48,13 @@ Npsem <- R6::R6Class(
             if (t == 1) {
                 return(self$W)
             }
-            c(private$parents_A(t - 1), self$A1[t - 1])
+            c(private$parents_A(t - 1), self$A[t - 1])
         },
         parents_A = function(t) {
             c(private$parents_L(t), unlist(self$L[[t]]))
         },
         parents_Y = function() {
-            c(self$W, unlist(self$L), self$A1)
+            c(self$W, unlist(self$L), self$A)
         }
     )
 )

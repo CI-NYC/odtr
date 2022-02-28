@@ -1,6 +1,15 @@
-crossFit <- function(train, valid, y, x, type = c("binomial", "continuous"), learners) {
+crossFit <- function(train, valid, y, x, type = c("binomial", "continuous"), learners, returnFit = FALSE) {
     fit <- regress(train, y, x, match.arg(type), learners)
-    predictt(fit, valid)
+    preds <- lapply(valid, \(x) predictt(fit, x))
+    
+    if (isFALSE(returnFit)) {
+        return(preds)
+    }
+    
+    list(
+        preds = preds, 
+        fit = fit
+    )
 }
 
 regress <- function(train, y, x, type, learners) {
@@ -10,8 +19,9 @@ regress <- function(train, y, x, type, learners) {
         outcome = y,
         outcome_type = type
     )
-    
-    learners$train(task)
+
+    fit <- learners$train(task)
+    fit
 }
 
 predictt <- function(fit, data) {
