@@ -1,1 +1,1 @@
-g <- glue::glue()
+g <- glue::glue

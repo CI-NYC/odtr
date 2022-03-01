@@ -1,1 +1,1 @@
-# mtp-optimal-rule
+# Optimal Dynamic Treatment Rule (ODTR) for Multiple Timepoints

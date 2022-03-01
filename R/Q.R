@@ -27,8 +27,6 @@ crossFitQ0 <- function(data, y, a, vars, learners, folds, outcome_type = c("bino
     )
 }
 
-# regrading above, for the first time point, Y becomes Y_d2 (i.e., Y when A_2 is set to the optimal value of A at time 2...)
-
 crossFitQv <- function(data, g, Q0, t, Npsem, learners, folds) {
     Qv <- matrix(nrow = nrow(data), ncol = 1)
     for (v in seq_along(folds)) {
@@ -47,4 +45,16 @@ crossFitQv <- function(data, g, Q0, t, Npsem, learners, folds) {
             crossFit(train, list(valid), "tmp_psuedo_D_blip", c(Npsem$W, unlist(Npsem$L)), "continuous", learners)[[1]]
     }
     Qv
+}
+
+addYd_t <- function(data, npsem, OdtrA_t, Q0_tFits, folds, t) {
+    Yd_t <- matrix(nrow = nrow(data), ncol = 1)
+    for (v in seq_along(folds)) {
+        valid <- origami::validation(data, folds[[v]])
+        valid[[npsem$A[t]]] <- origami::validation(OdtrA_t, folds[[v]])
+        Yd_t[folds[[v]]$validation_set, 1] <- predictt(Q0_tFits[[v]], valid)
+    } 
+    
+    data[[g("tmp_Yd_{t}")]] <- Yd_t[, 1]
+    data
 }

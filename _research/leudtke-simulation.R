@@ -67,31 +67,6 @@ sim.data.mtp = function(n) {
         )
     ))
     
-    # return(list(
-    #     ObsData = data.frame(
-    #         W1 = W1,
-    #         W2 = W2,
-    #         W3 = W3,
-    #         W4 = W4,
-    #         A1 = A1,
-    #         A2 = A2,
-    #         Y = Y
-    #     ),
-    #     FullData = data.frame(
-    #         W1 = W1,
-    #         W2 = W2,
-    #         W3.0 = W3.0,
-    #         W3.1 = W3.1,
-    #         W4.0 = W4.0,
-    #         W4.1 = W4.1,
-    #         A1 = A1,
-    #         A2 = A2,
-    #         Y.00 = Y.00,
-    #         Y.01 = Y.01,
-    #         Y.10 = Y.10,
-    #         Y.11 = Y.11
-    #     )
-    # ))
     data.frame(
         W1 = W1,
         W2 = W2,
