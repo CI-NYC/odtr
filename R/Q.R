@@ -1,5 +1,3 @@
-# Assume only a 2-time point scenario...
-# Assuming treatment is binary
 crossFitQ0 <- function(data, y, a, vars, learners, folds, outcome_type = c("binomial", "continuous")) {
     Q0 <- matrix(nrow = nrow(data), ncol = 3)
     fits <- list()

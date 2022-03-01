@@ -5,11 +5,12 @@ source("R/crossfit.R")
 source("R/g.R")
 source("R/utils.R")
 source("R/Q.R")
+source("R/odtr.R")
 
 library(sl3)
 library(lmtp)
 
-dat <- sim.data.mtp(1e3)
+dat <- sim.data.mtp(1e4)
 
 np <- Npsem$new(paste0("W", 1:4), A = c("A1", "A2"), Y = "Y")
 folds <- make_folds(dat, 10)
@@ -47,15 +48,17 @@ Qv_1 <- crossFitQv(dat, g0, Q0_1$Q0, 1, np, Sl, folds)
 # Identify optimal treatment decision for time 1
 OdtrA_1 <- ifelse(Qv_1[, 1] > 0, 1, 0)
 
+optimal <- odtr(dat, np, 3, Lrnr_glm$new(), Sl, "binomial")
+
 # evaluate Y_d ------------------------------------------------------------
 
 Odtr_dat <- dat
-Odtr_dat$A1 <- OdtrA_1
-Odtr_dat$A2 <- OdtrA_2
+Odtr_dat$A1 <- optimal$A1
+Odtr_dat$A2 <- optimal$A2
 
 Ey_d <- 
     lmtp_tmle(dat, c("A1", "A2"), "Y", paste0("W", 1:4), 
-              shifted = Odtr_dat, folds = 2, .SL_folds = 2, 
+              shifted = Odtr_dat, folds = 2, .SL_folds = 4, 
               learners_outcome = make_learner_stack(
                   Lrnr_glm, Lrnr_mean, Lrnr_earth
               ))
