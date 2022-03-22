@@ -1,0 +1,23 @@
+Package: odtr
+Title: Optimal Dynamic Treatment Rules for Multiple Timepoints
+Version: 0.0.0.9000
+Authors@R: 
+    c(person(given = "Nicholas",
+             family = "Williams",
+             role = c("aut", "cre", "cph"),
+             email = "ntwilliams.personal@gmail.com", 
+             comment = c(ORCID = "0000-0002-1378-4831")))
+Description: Discover optimal dynamic treatment rules in longitudinal, discrete time-process studies.
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+Imports: 
+    checkmate,
+    glue,
+    origami,
+    R6,
+    sl3 (>= 1.4.4)
+Remotes: 
+    tlverse/sl3
