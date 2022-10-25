@@ -1,4 +1,4 @@
-source("_research/leudtke-simulation.R")
+ource("R/luedtke2015.R")
 source("R/npsem.R")
 source("R/folds.R")
 source("R/crossfit.R")
@@ -10,7 +10,7 @@ source("R/odtr.R")
 library(sl3)
 library(lmtp)
 
-dat <- sim.data.mtp(1e4)
+dat <- sampleLuedtke2015(1e3)
 
 np <- Npsem$new(paste0("W", 1:4), A = c("A1", "A2"), Y = "Y")
 folds <- make_folds(dat, 10)
@@ -21,7 +21,7 @@ g0 <- crossFitg0(dat, np, Lrnr_glm$new(), folds)
 Sl <- make_learner(
     Lrnr_sl,
     learners = make_learner_stack(
-        Lrnr_glm, Lrnr_mean, Lrnr_earth
+        Lrnr_glm, Lrnr_mean
     ),
     metalearner = make_learner("Lrnr_nnls", convex = TRUE),
     keep_extra = FALSE
@@ -48,7 +48,7 @@ Qv_1 <- crossFitQv(dat, g0, Q0_1$Q0, 1, np, Sl, folds)
 # Identify optimal treatment decision for time 1
 OdtrA_1 <- ifelse(Qv_1[, 1] > 0, 1, 0)
 
-optimal <- odtr(dat, np, 3, Lrnr_glm$new(), Sl, "binomial")
+optimal <- odtr(dat, np, 1, Lrnr_glm$new(), Sl, "binomial")
 
 # evaluate Y_d ------------------------------------------------------------
 

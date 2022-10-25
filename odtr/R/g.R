@@ -11,7 +11,7 @@ crossFitg0 <- function(data, Npsem, learners, folds) {
             valid <- valid[risk, ]
             
             g0[folds[[v]]$validation_set[risk], t] <- 
-                crossFit(train, list(valid), Npsem$A[t], Npsem$history("A", t), NULL, "binomial", learners)[[1]]
+                crossFit(train, list(valid), Npsem$A[t], Npsem$history("A", t), "binomial", learners)[[1]]
         } 
     }
     g0

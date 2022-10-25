@@ -3,8 +3,7 @@ crossFitQ0 <- function(data, y, a, vars, t, Npsem, learners, folds, outcome_type
     fits <- list()
     for (v in seq_along(folds)) {
         train <- origami::training(data, folds[[v]])
-        valid0 <- valid1 <- valid <- 
-            origami::validation(data, folds[[v]])
+        valid0 <- valid1 <- valid <- origami::validation(data, folds[[v]])
         
         risk_train <- at_risk(train, Npsem, t)
         risk_valid <- at_risk(valid, Npsem, t)
@@ -13,8 +12,11 @@ crossFitQ0 <- function(data, y, a, vars, t, Npsem, learners, folds, outcome_type
         valid1[[a]] <- 1
 
         preds <- 
-            crossFit(train[risk_train, ], list(valid[risk_valid, ], valid0[risk_valid, ], valid1[risk_valid, ]), 
-                     y, vars, NULL, match.arg(outcome_type), learners, TRUE)
+            crossFit(
+                train[risk_train, ], 
+                list(valid[risk_valid, ], valid0[risk_valid, ], valid1[risk_valid, ]), 
+                y, vars, match.arg(outcome_type), learners, TRUE
+            )
 
         fits[[v]] <- preds$fit
         
@@ -51,22 +53,18 @@ crossFitQv <- function(data, g, Q0, t, Npsem, learners, folds) {
         H <- A*(1 / H) + (1 - A)*(1 / (1 - H))
         
         D1 <- (H * (Y - Q0_train[risk_train, "A=a"])) + Q0_train[risk_train, "A=1"] - Q0_train[risk_train, "A=0"]
-        
-        # if (t == 2) {
-        #     weights <- H
-        # } else {
-        #     weights <- rep(1, length(A))
-        # }
-        
-        weights <- NULL
-        
+
         train[risk_train, "tmp_psuedo_D_blip"] <- D1
 
-        Qv[folds[[v]]$validation_set[risk_valid], 1] <- 
-            crossFit(train[risk_train, ], list(valid[risk_valid, ]), "tmp_psuedo_D_blip", 
-                     Npsem$history("A", t), weights, "continuous", learners)[[1]]
-
-        #Qv[folds[[v]]$validation_set[!risk_valid], 1] <- 0
+        Qv[folds[[v]]$validation_set[risk_valid], 1] <-
+            crossFit(
+                train[risk_train, ],
+                list(valid[risk_valid, ]),
+                "tmp_psuedo_D_blip",
+                c(Npsem$W, Npsem$L[[t]]),
+                "continuous",
+                learners
+            )[[1]]
     }
     Qv
 }

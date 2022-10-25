@@ -1,4 +1,7 @@
 .Rproj.user
 ._*
-data/src
+data/
 bin
+*.docx
+.DS_Store
+scripts/deprecated

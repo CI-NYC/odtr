@@ -1,3 +1,4 @@
+#' @export
 sampleLuedtke2015 <- function(n) {
     W1 <- 2 * runif(n) - 1
     W2 <- 2 * runif(n) - 1
