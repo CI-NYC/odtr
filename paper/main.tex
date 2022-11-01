@@ -1,10 +1,13 @@
 \documentclass[11pt]{article}
 \usepackage{float}
-\usepackage[inline,shortlabels]{enumitem}
+
+\usepackage{amsmath}
+%\usepackage[inline,shortlabels]{enumitem}
 \usepackage{amssymb, amsmath, amsthm}
 \usepackage{mathrsfs}
 \usepackage{tabulary}
 \usepackage{rotating}
+\usepackage[para]{threeparttable} 
 \usepackage{enumerate}
 \usepackage{setspace}
 \usepackage{multirow}
@@ -17,7 +20,6 @@
 \usepackage{dsfont}
 \usepackage{hyperref}
 \usepackage{subcaption}
-\usepackage{amsmath}
 
 \DeclareMathOperator*{\argmax}{arg\,max}
 \renewcommand{\d}{\mathsf{d}}
@@ -26,6 +28,9 @@
 \usepackage{graphicx}
 \usepackage{url}
 \usepackage{booktabs}
+\usepackage{enumitem}
+\newlist{subquestion}{enumerate}{1}
+\setlist[subquestion,1]{label=(\alph*)}
 
 \usepackage{authblk}
 \usepackage{etoolbox}
@@ -61,48 +66,181 @@
 
 \end{abstract}
 
+\section*{Outline}
+
+\begin{enumerate}
+	\item Introduction
+	
+		\begin{enumerate}
+			\item The ATE is a frequently reported metric in epidemiological studies, but it does not provide information about treatment effect heterogeneity. Exploiting treatment effect heterogeneity is the foundation for optimal treatment rules and precision medicine.
+			\item \emph{example(s)  of treatment effect heterogeneity}
+			\item Treatments which vary over time require more advanced methods for exploiting treatment effect heterogeneity.
+			\item Our tutorial provides a guide to applied researchers in estimating the Longitudinal Superlearner ODTR, which helps us explot treatment effect heterogeity and estimate an optimal treatment rule in complex, time-varying exposure settings.
+		\end{enumerate}
+	
+	\item{Dynamic treatment rules}
+		\begin{enumerate}
+	
+	\item A common concept in introductory causal inference is to envision a hypothetical world in which everyone receives a certain value of a treatment, or exposure, and evaluate what the outcome of interest would have been in this world.
+				\begin{enumerate}
+	 \item This type of intervention, or rule, is described as \emph{static}, because the exposure value is evaluated at the same level for all individuals.
+	 
+	  \item In our OUD application, a static intervention would be to prescribe BUP-NX to all patients.
+	  
+		 	\end{enumerate}
+	 	
+	\item In contrast, a \emph{dynamic} rule is an intervention in which treatment is assigned as a function of each observation's observed history.
+	
+		\begin{enumerate}
+			\item In the context of treating OUD, we can conceptualize a dynamic rule where a clinician prescribes BUP-NX based upon the information they gather from a patient's health record and during the office visit.
+			
+			\item Consider, for example, the finding that individuals diagnosed with OUD and who are housing-unstable have lower risk of RROU when prescribed extended-release injection naltrexone versus when prescribed BUP-NX.
+			
+			\item A relevant dynamic treatment rule may be one in which clinicians use their patient's housing status to decide which pharmaceutical treatment to prescribe. This dynamic rule could contain additional measured covariates, such as the patient's age or the length of time since their diagnosis with OUD.
+			
+			\item If we call the variables in a patient's measured history $H$, we can denote a dynamic treatment rule, which is a deterministic function of $H$, as $\d(H)$, or simply $\d$. We could call the dynamic rule which uses housing status to decide treatment $\d_{a}$, and the dynamic rule which uses housing status, age, and diagnosis length of time $\d_{b}$.
+			 
+	 	\end{enumerate}
+	\end{enumerate}
+
+	\item Optimal dynamic treatment rules
+	
+	\begin{enumerate}
+		
+		\item In any particular application, dependent on the number of covariates and their possible values, there are numerous potential dynamic treatment rules. We can denote the set of all possible treatment rules as $\mathcal{D}$.
+		
+		\item One of these treatment rules $\d$ in the set $\mathcal{D}$ is \emph{optimal} in the sense that it will maximize the benefit for the most individuals.
+		
+		\item How does one define ``benefit'' for an individual? The counterfactual outcome framework provides an amenable definition for this. We can consider the outcome of interest for an individual if they had received the treatment assignment from a certain rule, which is possibly contrary to the treatment they actually received, denoted as $Y_\d$. Under any dynamic treatment rule, we can conceptualize the expected counterfactual outcomes under that rule, $\mathrm{E}[Y_\d]$
+		
+		\item It follows then that the ODTR is the dynamic rule which minimizes (or maximizes, depending on the application) $\E[Y_\d]$.
+		
+		$$
+		\d_{\text{opt}} \equiv \argmax_{\d \in \mathcal{D}} \E [Y_{\d}]
+		$$
+		
+		\item One ODTR relevant to patients with OUD is ``for which patients should we increase dosage (as opposed to continue with a constant dose) of BUP-NX after 1 month?''. Our goal in learning this ODTR would be to find the BUP-NX dosing strategy or function $\d$ which minimizes RROU for all patients using the information recorded at their baseline visit.
+		
+		
+	\end{enumerate}
+
+	\item Longitudinal optimal dynamic treatment rules
+	
+	\begin{enumerate}
+		
+		\item Many exposures cannot be reduced to a single time-point. Researchers are often tasked with conceptualizing treatment strategies over time. 
+		
+		\item The extension of an ODTR to a longitudinal or time-varying treatment setting is intuitively straightforward. Consider a study with $\tau$ discrete time points. Instead of a single treatment rule $\d$, there will instead be a sequence of decisions $\d = (\d_1, \d_2, \dots, \d_\tau)$ to be made.
+		
+		\item One of these sequences is optimal, similarly to the ODTR, in that it will maximize the benefit for the most individuals.
+		
+		\item We can denote this longitudinal ODTR as $\d_{t,\text{opt}}$, and it is the result of optimizing $\E [Y_{t,\d}$ over all time points $t$. \textcolor{red}{need to fix this notation}
+		
+		$$
+		\d_{\text{opt}} \equiv \argmax_{\d \in \mathcal{D}} \E [Y_{\d}]
+		$$
+		
+		\item A relevant question for OUD research is, ``for which patients should we increase dosage (as opposed to continue with a constant dose) of BUP-NX each week, using each patients past history and information obtained in their weekly follow-up visit?''. This is the longitudinal ODTR we seek to learn in our application.
+		
+	\end{enumerate}
+	
+	
+	\item Estimation
+	
+	\begin{enumerate}
+		
+		\item There are several different ways to proceed in estimating an ODTR. Here we will focus on the SuperLearner ODTR, described in detail in Montoya et al.
+		\item The SuperLearner ODTR proceeds by estimating the CATE, or the difference in outcomes if everyone were treated, $Y_1$, compared to if no one were treated, $Y_0$, among covariate strata $V$.
+		
+		\begin{equation}
+		Q(V) = \E[Y_1 - Y_0 | V]
+		\end{equation}
+		
+		The next step is to look at whether the CATE is positive or negative for a specific individual to determine whether that individual should receive treatment. This is sometimes referred to as the ``continuous blip function."  Our treatment rule $d$ is thus defined as: 
+		
+		\begin{equation}
+		d(V) = \mathrm{I}[Q(V) > 0]
+		\end{equation}
+		
+		\item The first step to estimating the CATE causal estimand in a practical problem is to assess the standard causal identification assumptions of positivity, consistency, and conditional exchangeability. If met, we can rewrite the CATE as a function of the observed data as follows.
+		
+		\begin{equation}
+		Q(V) = \E\Big[Q(L_1, A_1 = 1) - Q(L_1, A_1 = 0) \Big| V\Big]  
+		\end{equation}
+				
+		  Then, we could estimate the CATE using several different estimators, such as G-computation, IPTW, AIPW, or TMLE.
+		\item \emph{A brief description of these four algorithms and the beneficial statistical properties of AIPW/TMLE.}
+		
+		
+\end{enumerate}
+\item Longitudinal Optimal Dynamic Treatment Regimes
+\begin{enumerate}
+	
+	\item Studying this requires properly adjusting for time-varying covariates, which often exhibit feedback between treatment across time (so called time dependent confounders)
+	
+	\item \emph{assess the identification assumptions of positivity, consistency, and sequential conditional exchangeability.} Then, we could again estimate the CATE using several different estimators. Here we will focus on...
+	\item 
+		
+	\end{enumerate}
+\end{enumerate}
+
+
 \section{Introduction}
 
-Frequently, epidemiological studies report estimates of the %Causal inference, in the context of epidemiological studies, is often primarily focused on estimation of the 
-average treatment effect (ATE), which is an %statistical 
-estimand that summarizes the differences, averaged across a population, in an outcome of interest if all members of a population had been treated (or exposed) compared to if no members of the population had been treated. % the exposure. 
-While the ATE can be a useful measure of %in identifying 
-whether a treatment %n exposure 
-is beneficial or harmful at the population level, it does not provide any information about whether the treatment % an exposure 
-is beneficial or harmful for a particular %any given 
-individual. Indeed, it is possible that a treatment % exposure 
-that is beneficial on average for a population, could benefit some individuals but harm others, i.e., exhibit treatment effect heterogeneity. The field of optimal treatment rules and personalized medicine assumes the existence of treatment effect heterogeneity, and therefore, has as its foundational ideal that % rests on this idea---that 
-treatment should not necessarily be a one-sized-fits-all approach; rather, treatments should be given to individuals who would benefit but not to individuals who would not.\cite{} A treatment strategy that uses individual baseline information %persons characteristics 
-to tailor treatment to maximize benefit is known as an \textit{optimal individualized treatment rule}.\cite{} %One can learn such an optimal treatment rule by using baseline information to predict which individuals would benefit from a treatment version versus not.\cite{} %In an ideal scenario, public health interventions would only intervene on an individual, using known information about the person, where doing so would be beneficial. 
-For example, in a recent comparative effectiveness trial of two common treatments for opioid use disorder (OUD), an optimal treatment rule was learned in which individuals who were homeless were found to have lower risk of relapse if treated with injection naltrexone, whereas individuals with stable housing were found to have lower risk of relapse if treated with the alternative medication, buprenorphine.\cite{rudolph2021optimizing}. 
 
-However, many treatments and exposures are not limited to a single point in time. Instead, treatment can be a long-term process, as is actually the case for medication for OUD in the example above. Consequently, learning an optimal rule for a long-term treatment may involve not just learning the extent to which the comparative treatments' benefits vary across %which treatment works best for a set of 
-baseline individual demographic and clinical characteristics, but also learning the extent to which the comparative treatments' benefits vary as (time-varying)  % Just as individualizing treatment assignment (e.g, by applying an optimal treatment rule) may optimize the outcome of interest in the population, treatment the optimal approach to treatment across individuals may not be treat everyone vs. treat  no one, there may not be a one-sized-fits-all approach to whether or not to treat individuals, or whether to treat with one medication over another, there also may not be treatment %the optimal treatment rule can vary 
-%across individuals, there may also not be a it may also vary over time within an individual; for example, as a person's 
-clinical characteristics or other relevant circumstances evolve. While learning the optimal individualized treatment rule for a fixed-time exposure has been given much attention in the precision medicine literature \citep[e.g.,][]{van2015targeted,MontoyavanderLaanLuedtkeSkeemCoylePetersen2022}, less exists on estimating the time-varying optimal individualized treatment rules, also called \textit{optimal individualized dynamic treatment regimes (ODTR)}. To our knowledge, the much of the work on longitudinal ODTRs has focused %has largely been 
-on the theory underlying identification of the causal parameters and estimation strategies \citep{luedtkeSLodtr}. %As is, there are no 
-Tutorials or software packages to facilitate implementation of these estimators for %that would make these methods accessible to 
-applied researchers are largely absent, which could in part explain why longitudinal ODTR have not been more widely adopted in epidemiology.
+Frequently, epidemiological studies report estimates of the average treatment effect (ATE), which is an estimand that summarizes the differences, averaged across a population, in an outcome of interest if all members of a population had been treated (or exposed) compared to if no members of the population had been treated. While the ATE can be a useful measure of whether a treatment is beneficial or harmful at the population level, it does not provide any information about whether the treatment is beneficial or harmful for a particular individual. Indeed, it is possible that a treatment that is beneficial on average for a population, could benefit some individuals but harm others, i.e., exhibit treatment effect heterogeneity. The field of optimal treatment rules and personalized medicine assumes the existence of treatment effect heterogeneity, and therefore, has as its foundational ideal that treatment should not necessarily be a one-sized-fits-all approach; rather, treatments should be given to individuals who would benefit but not to individuals who would not.\cite{} A treatment strategy that uses individual baseline information to tailor treatment to maximize benefit is known as an \textit{optimal treatment rule}.\cite{} For example, in a recent comparative effectiveness trial of two common treatments for opioid use disorder (OUD), an optimal treatment rule was learned in which individuals who were homeless were found to have lower risk of relapse if treated with injection naltrexone, whereas individuals with stable housing were found to have lower risk of relapse if treated with the alternative medication, buprenorphine.\cite{rudolph2021optimizing}. 
 
-We aim to address this gap. In this tutorial-style paper, we describe how to estimate a longitudinal ODTR from observational data. We apply this framework to learn the ODTR for % the buprenorphine (BUP) arms of three harmonized, randomized comparative effectiveness trials to learn the ODTR 
-for adapting weekly buprenorphine-naloxone (BUP-NX) dose with respect to minimizing the risk of return to regular opioid use (RROU) over the first 12-weeks of treatment for OUD. This research question is particularly well-suited to being addressed with an ODTR, because currently, addiction medicine clinicians make buprenorphine dosing decisions with little quantitative evidence-based guidance. Under-dosing of medication used in treating OUD, like buprenorphine, is common practice and is considered a contributing factor to poor OUD treatment outcomes \citep{gordon2015patterns,d2019evidence}. Recently, \citet{rudolph2022dose} examined a time-varying but non-individualized dosing strategy where BUP-NX dose was increased whenever a patient indicated opioid use in the prior week and found that this strategy resulted in a 23\% reduced risk of RROU compared to a treatment strategy where BUP-NX dose was held constant. It is of interest to know whether an individualized ODTR learned from the data could reduce risk of RROU even further. After learning the ODTR, we compare the estimated risk of RROU under the ODTR to the estimated risk of RROU using the previously defined, non-individualized strategy of increasing dose in response to opioid use%from the OUD literature 
-\citep{rudolph2022dose} and another previously defined treatment rule where dose is held constant after week 3 of treatment. An \texttt{R} package to implement the method we describe is available for download from 
+However, many treatments and exposures are not limited to a single point in time. Instead, treatment can be a long-term process, as is actually the case for medication for OUD in the example above. Consequently, learning an optimal rule for a long-term treatment may involve not just learning the extent to which the comparative treatments' benefits vary across baseline individual demographic and clinical characteristics, but also learning the extent to which the comparative treatments' benefits vary as (time-varying) clinical characteristics or other relevant circumstances evolve. While learning the optimal treatment rule for a fixed-time exposure has been given much attention in the precision medicine literature \citep[e.g.,][]{van2015targeted,MontoyavanderLaanLuedtkeSkeemCoylePetersen2022}, less exists on estimating the time-varying optimal treatment rules, also called \textit{optimal dynamic treatment rules (ODTR)}. To our knowledge, the much of the work on longitudinal ODTRs has focused on the theory underlying identification of the causal parameters and estimation strategies \citep{luedtkeSLodtr}. Tutorials or software packages to facilitate implementation of these estimators for applied researchers are largely absent, which could in part explain why longitudinal ODTR have not been more widely adopted in epidemiology.
+
+We aim to address this gap. In this tutorial-style paper, we describe how to estimate a longitudinal ODTR from observational data. We apply this framework to learn the ODTR for adapting weekly buprenorphine-naloxone (BUP-NX) dose with respect to minimizing the risk of return to regular opioid use (RROU) over the first 12-weeks of treatment for OUD. This research question is particularly well-suited to being addressed with an ODTR, because currently, addiction medicine clinicians make buprenorphine dosing decisions with little quantitative evidence-based guidance. Under-dosing of medication used in treating OUD, like buprenorphine, is common practice and is considered a contributing factor to poor OUD treatment outcomes \citep{gordon2015patterns,d2019evidence}. Recently, \citet{rudolph2022dose} examined a time-varying, clinically-defined dosing strategy where BUP-NX dose was increased whenever a patient indicated opioid use in the prior week and found that this strategy resulted in a 23\% reduced risk of RROU compared to a treatment strategy where BUP-NX dose was held constant. It is of interest to know whether an ODTR learned from the data could reduce risk of RROU even further. After learning the ODTR, we compare the estimated risk of RROU under the ODTR to the estimated risk of RROU using the previously defined, clinical knowledge-based strategy of increasing dose in response to opioid use \citep{rudolph2022dose} and another previously defined treatment rule where dose is held constant after week 3 of treatment. An \texttt{R} package to implement the method we describe is available for download from 
 \url{link blinded for review}.
 %\href{https://github.com/Rudolph-et-al-MSPH-Epidemiology/odtr/tree/main/pkg}{GitHub}.
 
-%Throughout this tutorial, we are interested in learning an ODTR of when to increase buprenorphine dose over the first 12 weeks of treatment such that RROU is minimized. Briefly, Standard of care treatment for opioid use disorder (OUD) is long-term treatment with one of three medications:  BUP-NX, extended-release injection naltrexone (XR-NTX), or methadone \cite{volkow2019prevention,williams2018developing}. Prior work has shown that BUP-NX and methadone dose is likely key in reducing the risk of RROU. 
+\section{Intuition}
 
-\section{Background on optimal individualized dynamic treatment rules}
+	\subsection{Dynamic treatment rules}
 
-Individualized dynamic treatment rules are decision making models that assign treatment to observations as a function of the observations' observed history. For example, \citep{} found that individuals diagnosed with OUD and who are housing-unstable have lower risk of RROU when prescribed extended-release injection naltrexone (XR-NTX) versus when prescribed BUP-NX. Using this knowledge, a clinician may choose to prescribe XR-NTX or BUP-NX as a function of their patients housing stability. If this treatment rule minimized the risk of RROU, it would then be considered the \textit{optimal} rule.
+	A common idea in epidemiology and, specifically, the causal inference literature is envisioning a hypothetical world in which everyone receives a certain value of a treatment, or exposure. This type of intervention, or rule, is described as \emph{static}, because a single exposure value is evaluated for all individuals in the study. In our OUD application, a static intervention could be to prescribe a specific dose of BUP-NX to all patients.
+		
+	In contrast, a \emph{dynamic} intervention assigns treatment as a function of each observation's observed history. In the context of treating OUD, we can conceptualize a dynamic rule in which a clinician prescribes BUP-NX based upon the information they gather from their patient's health record and/or during the office visit. Consider, for example, the finding that individuals diagnosed with OUD and who are housing-unstable have lower risk of RROU when prescribed extended-release injection naltrexone versus when prescribed BUP-NX. A relevant dynamic treatment rule may be one in which clinicians use their patient's housing status to decide which pharmaceutical treatment to prescribe. This dynamic rule could contain additional measured covariates, such as the patient's age or the length of time since their diagnosis with OUD.
+	
+	If we call the variables in a patient's measured history $H$, we can choose some or all of these variables to be part of the dynamic rule. If we call this possible subset of covariates $V$, we may then denote a dynamic treatment rule, which is a deterministic function of $V$, as $\d(V)$, or simply $\d$. We might choose to distinguish the dynamic rule which uses housing status to decide treatment as $\d_{a}$ and the dynamic rule which uses housing status, age, and diagnosis length of time as $\d_{b}$.
+		
+	\subsection{Optimal dynamic treatment rules} 
+	
+	In any particular application, dependent on the number of covariates and their possible values, there are numerous potential dynamic treatment rules. We will denote the set of all possible treatment rules as $\mathcal{D}$. One of these treatment rules $\d$ in the set $\mathcal{D}$ is \emph{optimal} in the sense that it will maximize the benefit for the most individuals.
+	
+	How does one define ``benefit'' for an individual? The counterfactual outcome framework provides an amenable definition for this. We can consider the outcome of interest for an individual if they had received the treatment assignment from a certain rule, which is possibly contrary to the treatment they actually received. We denote this so-called counterfactual outcome as $Y_\d$. Under any dynamic treatment rule, we may then conceptualize the expected counterfactual outcomes under that rule for all individuals, $\mathrm{E}[Y_\d]$.
+	
+	It follows then that the ODTR is the dynamic rule which minimizes (or maximizes, depending on the application) $\E[Y_\d]$.
+	
+	$$
+	\d_{\text{opt}} \equiv \argmax_{\d \in \mathcal{D}} \E [Y_{\d}]
+	$$
+	
+	One ODTR relevant to patients with OUD is ``for whom should we increase the dosage of BUP-NX after 1 month?''. Our goal in learning this ODTR would be to find the BUP-NX dosing strategy (increase dosage versus keep a constant dose) which minimizes RROU for all patients using the information recorded at their baseline visit.	
 
-Formally, consider a discrete-time process, $t = 1, ..., \tau$, where we observe $n$ i.i.d. copies $O_1, ..., O_n$ of $O = (L_t, A_t, Y) \sim P$. At each time-point $t$, observation $i$ is observed as having covariates $L_t$ that precede a binary treatment indicator $A_t$ and where the outcome variable is $Y$. We use $\overline{X}_t = (X_1, ..., X_t)$ to denote history of a variable $X_t$, and $H_t = (\overline{L}_t, \overline{A}_{t-1})$ to denote the history of all variables up until just before $A_t$. Define $V_t$ as the subset of covariates $H_t$ that will be used in the rule for assigning $A_t$ based on the observed covariate values $v_t$; we call this rule $\d_t(V)$. Symbols with a subscript $n$, (i.e., $Q_n$) represent values estimated from data. Our goal is to learn the treatment rule, among the set of all possible treatment rules ($\mathcal{D}$) that maximizes a beneficial mean outcome (or minimizes a harmful mean outcome) from the observed data, that is: 
+	\subsection{Longitudinal optimal dynamic treatment rules} 
+	
+	Many exposures cannot be reduced to a single time-point. Researchers are often tasked with con- ceptualizing treatment strategies over time. The intuition for extending an ODTR to a longitudinal or time-varying treatment setting is straightforward. Consider a study with $t = 1, 2 , \dots, \tau$ discrete time points. Instead of a single treatment rule $\d$, there will instead be a sequence of decisions $\d = (\d_1, \d_2, \dots, \d_\tau)$ to be made. One of these sequences of dynamic treatment rules is, similarly to a point-in-time ODTR, optimal for maximizing benefit across the most individuals. We can denote this longitudinal ODTR as $\d_{t,\text{opt}}$, as it is the result of optimizing $\E [Y_{t,\d}]$ over all time points $t$. \textcolor{red}{According to Ivan's comment, need to fix this notation so that it is showing the optimization across all time points.}
+	
+	$$
+	\d_{t,\text{opt}} \equiv \argmax_{\d_t \in \mathcal{D}} \E [Y_{\d_t}]
+	$$
+	
+	A relevant question for OUD research is, ``for whom should we increase dosage of BUP-NX each week, using each patient's baseline history and information obtained in their weekly follow-up visits?''. The primary goal of our application is to learn this longitudinal ODTR.
+	
+	\section{Notation}
 
-$$
-\d_{t, \text{opt}}(V) \equiv \argmax _{\d_t(V) \in \mathcal{D}} \E \Big[ Y_{\d_t(V)} \Big]
-$$
+	Formally, consider a discrete-time process, $t = 1, ..., \tau$, where we observe $n$ i.i.d. copies $O_1, ..., O_n$ of $O = (L_t, A_t, Y) \sim P$. At each time-point $t$, observation $i$ is observed as having covariates $L_t$ that precede a binary treatment indicator $A_t$ and where the outcome variable is $Y$. We use $\overline{X}_t = (X_1, ..., X_t)$ to denote history of a variable $X_t$, and $H_t = (\overline{L}_t, \overline{A}_{t-1})$ to denote the history of all variables up until just before $A_t$. Define $V_t$ as the subset of covariates $H_t$ that will be used in the rule for assigning $A_t$ based on the observed covariate values $v_t$; we call this rule $\d_t(V)$. Symbols with a subscript $n$, (i.e., $Q_n$) represent values estimated from data. Our goal is to learn the treatment rule, among the set of all possible treatment rules ($\mathcal{D}$) that maximizes a beneficial mean outcome (or minimizes a harmful mean outcome) from the observed data, that is: 
 
-The target causal parameter under the ODTR is then $\psi := \E[Y_{\d_{t, \text{opt}}(V)}]$, which is the mean outcome under a dynamic treatment rule---the average value of the outcome of interest if, possibly contrary to what was observed, observations had been assigned to treatment according to the rule. Assuming exchangeability, consistency, and positivity are satisfied, $\psi$ is identified and can be estimated using different techniques such as g-computation \citep{}, inverse probability weighting \citep{}, targeted minimum loss-based estimation \citep{tmleLong} or the SDR estimator \cite{luedtke2018sequential}. 
+	$$
+	\d_{t, \text{opt}}(V) \equiv \argmax _{\d_t(V) \in \mathcal{D}} \E \Big[ Y_{\d_t(V)} \Big]
+	$$
+
+	The target causal parameter under the ODTR is then $\psi := \E[Y_{\d_{t, \text{opt}}(V)}]$, which is the mean outcome under a dynamic treatment rule---the average value of the outcome of interest if, possibly contrary to what was observed, observations had been assigned to treatment according to the rule. Assuming exchangeability, consistency, and positivity are satisfied, $\psi$ is identified and can be estimated using different techniques such as g-computation \citep{}, inverse probability weighting \citep{}, targeted minimum loss-based estimation \citep{tmleLong} or the SDR estimator \cite{luedtke2018sequential}.
+
+\section{Estimation} 
 
 \subsubsection{Approaches to learning the ODTR}
 
@@ -142,16 +280,54 @@ Beginning with time $t = \tau$, we again first estimate $Q(H_t, A_t)$, predict f
 We now illustrate these methods by applying them to learn a longitudinal ODTR of when to increase BUP-NX dose during the first 12 weeks of treatment to minimize RROU among those randomized to the BUP-NX arms of the three clinical trials. 
 
 \subsection*{Data and measures}
-We used data from the BUP-NX arms of three large, harmonized comparative effectiveness trials of medications for the treatment of OUD that were part of the NIDA Clinical Trials Network (CTN): CTN0027, Phase 2 of CTN0030, and CTN0051. CTN0027 was conducted from 2006-2010 and randomized 1,269 participants to either BUP-NX or methadone treatment for 24 weeks \citep{potter2013buprenorphine,saxon2013buprenorphine}. Phase 2 of CTN0030 was conducted from 2006-2009 and randomized 360 participants to BUP-NX and standard medical management vs. BUP-NX and individual drug counseling for 12 weeks \citep{weiss2010multi}. CTN0051 was conducted from 2014-2017 and randomized 570 participants to either extended release naltrexone or BUP-NX treatment for 24 weeks \citep{lee2018comparative}. Using the BUP-NX of all 3 trials resulted in a sample size of N = ? individuals. 
 
-Consistent with both the primary trial papers \citep{} and secondary analyses of these trials \citep{rudolph2022dose}, we used time of return to regular opioid use (RROU) as the outcome of interest, defined as the last day of 7-days of non-study opioid use, or the first-day of the fourth consecutive week of at-least-once-weekly non-study opioid use. Non-study opioid use was determined using: urine drug screens and timeline follow-back interviews. Missed visits and urine screening refusal were considered a positive for opioid use, consistent with the primary trial papers and previous secondary analyses \citep{}, and is considered a reasonable assumption given prior research \citep{}. Our time-varying treatment of interest was an increase in BUP-NX dose, a binary (0/1) variable. We included race/ethnicity, age, biological sex, highest level of past opioid withdrawal discomfort, past-year substance use disorders, history of neurological injury, history of psychiatric disorders, history of IV drug use, and past-30 day drug use as baseline confounders of the time-varying BUP-NX dose increase and time to RROU relationship. We also included most recently prescribed BUP-NX dose and weekly non-study opioid use as time-varying confounders.
+\subsubsection*{Cohort}
+
+
+We used data from the BUP-NX arms of three large comparative effectiveness trials of medications for the treatment of OUD that were part of the NIDA Clinical Trials Network \citep{potter2013buprenorphine,saxon2013buprenorphine,weiss2010multi,lee2018comparative}. Details of the treatment arms, sample size, and study time frame for each trial in the harmonized study cohort is shown in Table \ref{tab:t0}. Using the BUP-NX of all 3 trials resulted in a sample size of N = 2,199 individuals. 
+
+\begin{table}
+	\begin{threeparttable}
+		\caption{Individual Clinical Trial Network (CTN) studies comprising the harmonized BUP-NX study cohort.}
+		\centering
+		\begin{tabular}[t]{l|r|r|r}
+			\toprule
+			Study & CTN0027 & CTN0030 Phase II & CTN0051\\
+			\midrule
+			Study year & 2006-2010 & 2006-2009 & 2014-2017 \\
+			Sample size & 1269 & 360 & 570 \\
+			Study length (weeks) & 24 & 12 & 24 \\
+			Treatment arm\tnote{a} & methadone & BUP-NX and drug counseling & extended release naltrexone \\
+			\bottomrule
+		\end{tabular}
+		\begin{tablenotes}
+			\item [a] Subjects were randomized to receive this treatment arm or BUP-NX with standard medical care.
+		\end{tablenotes}
+		\label{tab:t0}
+	\end{threeparttable}
+\end{table}
+
+\subsubsection*{Outcome}
+
+Consistent with both the primary trial papers \citep{} and secondary analyses of these trials \citep{rudolph2022dose}, we used RROU as the outcome of interest, defined as the last day of 7-days of non-study opioid use, or the first-day of the fourth consecutive week of at-least-once-weekly non-study opioid use. Non-study opioid use was determined using urine drug screens and timeline follow-back interviews. Missed visits and urine screening refusal were considered a positive for opioid use, consistent with the primary trial papers and previous secondary analyses \citep{}, and is considered a reasonable assumption given prior research \citep{}.
+
+\subsubsection*{Exposure}
+
+Our time-varying treatment of interest was an increase in BUP-NX dose, a binary (0/1) variable. \textcolor{red}{time scale?}
+
+\subsubsection*{Confounders}
+
+Baseline confounders of the time-varying BUP-NX dose increase and time to RROU relationship included race/ethnicity, age, biological sex, highest level of past opioid withdrawal discomfort, past-year substance use disorders, history of neurological injury, history of psychiatric disorders, history of IV drug use, and past-30 day drug use. Time-varying confounders included most recently prescribed BUP-NX dose and weekly non-study opioid use.
 
 \subsection{Statistical analysis}
 
+\subsubsection*{ODTR}
+
 We first learned an ODTR for when to increase BUP-NX dose that would minimize RROU over the initial 12 weeks of treatment. We did this by xxxxx
 
+\subsubsection*{Non-individualized treatment regimens}
 
-Next, we quantified the effect of applying this ODTR versus two non-individualized BUP-NX dosing strategies on RROU by week 12 of treatment. The non-individualized dosing strategies that we used as references were: 1) holding dose constant after week 3 of treatment (what we call the ``constant dosing strategy'') and 2) increasing dose in response to opioid use the previous week (what we call the ``dynamic dosing strategy''). We used a longitudinal sequentially doubly robust (SDR) estimator to estimate the mean counterfactual week-12 relapse under each dosing strategy \citep{luedtke2018sequential}. The SDR estimator incorporated an ensemble of machine learning algorithms \cite{van2007super} to flexibly model relationships (an intercept-only model, a main-effects generalized linear model, multivariate adaptive regression splines [MARS] \cite{friedman1991multivariate}, and extreme gradient boosting \cite{chenXGBoost}). Variances were estimated using the sample variance of the influence curve \cite{luedtke2018sequential}. 
+Next, we quantified the effect of applying this ODTR versus two clinically defined BUP-NX dosing strategies on RROU by week 12 of treatment. The clinically defined dosing strategies that we used as references were: 1) holding dose constant after week 3 of treatment (what we call the ``constant dosing strategy'') and 2) increasing dose in response to opioid use the previous week (what we call the ``dynamic dosing strategy''). We used a longitudinal sequentially doubly robust (SDR) estimator to estimate the mean counterfactual week-12 relapse under each dosing strategy \citep{luedtke2018sequential}. The SDR estimator incorporated an ensemble of machine learning algorithms \cite{van2007super} to flexibly model relationships (an intercept-only model, a main-effects generalized linear model, multivariate adaptive regression splines [MARS] \cite{friedman1991multivariate}, and extreme gradient boosting \cite{chenXGBoost}). Variances were estimated using the sample variance of the influence curve \cite{luedtke2018sequential}. 
 
 We used \texttt{R} (version 4.2.0) for all analyses \cite{R} with the lmtp \cite{lmtpR, lmtpJASA} and SuperLearner \citep{SuperLearnerPkg} packages. Code to replicate the analyses is available on \href{https://github.com/Rudolph-et-al-MSPH-Epidemiology/odtr}{GitHub}.
 %The effect of the constant dosing strategy, $\E[Y^0]$, may be interpreted as the mean counterfactual risk of RROU had all participants had their BUP-NX dose held constant for their duration of treatment. The effect of the dynamic dose increase strategy, $\E[Y_{\d1}]$, may be interpreted as the mean counterfactual risk of RROU if, every time there was previous week opioid use, BUP-NX dose was increased, by any amount, up to the allowable maximum. 
@@ -159,7 +335,7 @@ We used \texttt{R} (version 4.2.0) for all analyses \cite{R} with the lmtp \cite
 %\subsubsection{Notation}
 %Consider a discrete-time process, $t = 1, ..., \tau$, where we observe $n$ i.i.d. copies $O_1, ..., O_n$ of $O = (L_t, A_t, Y) \sim P_0$. At each time-point $t$, observation $i$ is observed as having covariates $L_t$ that precede a binary treatment indicator $A_t$ and where the outcome variable is $Y$. We use $\overline{X}_t = (X_1, ..., X_t)$ to denote history of a variable $X_t$, and $H_t = (\overline{L}_t, \overline{A}_{t-1})$ to denote the history of all variables up until just before $A_t$. Let $g_{0, A_t}(0)$ be the propensity score model representing the probability that an observation will receive treatment at time $t$ and $Q_0(H_t, A_t)$ as the conditional expectation of the outcome $Y$ given the covariate history $H_t$ and treatment $A_t$. 
 
-%\subsubsection{Optimal individualized dynamic treatment rules}
+%\subsubsection{Optimal dynamic treatment rules}
 
 
 \subsection{Results}
@@ -170,6 +346,8 @@ The number of patients who would have BUP-NX dose increased or held constant as 
 
 We find evidence that the estimated ODTR and the dynamic-use dosing strategy from \citet{rudolph2022dose} would reduce the risk of RROU compared to holding BUP-NX dose constant by 24\% (RR 95\% CI = 0.72, 0.82) and 20\% (RR 95\% CI = 0.68, 0.94) respectively. We find no meaningful difference in the risk of return to week-12 regular use between the ODTR and the dynamic use dosing strategy.
 
+
+
 \begin{table}[H]
 \caption{Number of patients randomized to receive BUP-NX that were observed as following a given strategy: (Increase) increased dose under the strategy and were observed as increasing dose, or (Constant) had a constant dose under the strategy and were observed as having a constant dose.}
 \centering\footnotesize
@@ -177,19 +355,19 @@ We find evidence that the estimated ODTR and the dynamic-use dosing strategy fro
 \toprule
  & Wk. 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 & $\hat \psi$\\
 \midrule
+\multicolumn{11}{l}{Learned Longitudinal Optimal Dynamic Treatment Rule, $\d_{n, \text{opt}}(V)$}\\
+\midrule
+\hspace{1em}Increase & 4 & 0 & 55 & 4 & 0 & 25 & 3 & 6 & 12 & \multirow{2}{*}{0.38}\\
+\hspace{1em}Constant & 1179 & 1016 & 1 & 948 & 822 & 0 & 734 & 730 & 68 &  \multirow{2}{*}{\includegraphics[width=0.67in, height=0.17in]{figures/pointrange_b9c61b128299.pdf}}\\
+\hspace{1em}\emph{Total} & 1183 & 1016 & 56 & 952 & 822 & 25 & 737 & 736 & 80\\
+\addlinespace[0.3em]
+\midrule
 \addlinespace[0.3em]
 \multicolumn{11}{l}{Constant dosing strategy}\\
 \midrule
 \hspace{1em}Constant & 1179 & 1016 & 976 & 948 & 822 & 792 & 761 & 730 & 710 & \multirow{2}{*}{0.49}\\
 \hspace{1em}\hspace{1em}$\d_{n, \text{opt}}(V)\,^a$ & 0 & 0 & 933 & 0 & 0 & 756 & 27 & 0 & 642 & \multirow{2}{*}{\includegraphics[width=0.67in, height=0.17in]{figures/pointrange_b9c649cb1cb3.pdf}}\\
 \hspace{1em}\hspace{1em}$\d1\,^b$ & 302 & 243 & 222 & 131 & 116 & 120 & 99 & 88 & 91\\
-\addlinespace[0.3em]
-\midrule
-\multicolumn{11}{l}{Learned optimal strategy, $\d_{n, \text{opt}}(V)$}\\
-\midrule
-\hspace{1em}Increase & 4 & 0 & 55 & 4 & 0 & 25 & 3 & 6 & 12 & \multirow{2}{*}{0.38}\\
-\hspace{1em}Constant & 1179 & 1016 & 1 & 948 & 822 & 0 & 734 & 730 & 68 &  \multirow{2}{*}{\includegraphics[width=0.67in, height=0.17in]{figures/pointrange_b9c61b128299.pdf}}\\
-\hspace{1em}\emph{Total} & 1183 & 1016 & 56 & 952 & 822 & 25 & 737 & 736 & 80\\
 \addlinespace[0.3em]
 \midrule
 \multicolumn{11}{l}{Increase dose in response to use strategy, $\d1$}\\
@@ -206,7 +384,7 @@ We find evidence that the estimated ODTR and the dynamic-use dosing strategy fro
 
 \section{Discussion}
 
-In this paper we learned an optimal, time-varying BUP-NX dosing strategy for minimizing week-12 return to regular opioid-use. Using a doubly-robust estimation procedure, we found evidence that the ODTR would significantly decrease the risk of week-12 return to regular use compared to a strategy where BUP-NX dose is held constant for the duration of treatment. 
+In this paper we learned a longitudinal ODTR for BUP-NX dosing strategies with the goal of minimizing week-12 RROU. Using a doubly-robust estimation procedure, we found evidence that the learned Longitudinal ODTR would significantly decrease the risk of week-12 RROU compared to a strategy where BUP-NX dose is held constant for the duration of treatment, and compared similarly well to a dosing strategy where BUP-NX dose is increased...
 
 The average treatment effect is a limited measure of the causal effect of a public health intervention insofar as its reporting ignores treatment effect heterogeneity as well as realistic and practical constraints for treating different individuals in a population. This is highlighted by our application; clinicians are given little practical guidance on the adjustment of BUP-NX dosing for the long-term treatment of OUD. 
 
