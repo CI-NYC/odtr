@@ -1,11 +1,12 @@
 library(tidyverse)
 library(lmtp)
 library(glue)
+library(future)
 
-devtools::load_all("pkg")
+devtools::load_all("odtr")
 
-imputed <- readRDS("data/src/clean•patients•imputed•010422.rds")
-combined <- readRDS("data/src/clean•weeks•with•relapse•wide•010422.rds")
+imputed <- readRDS("data/drv/clean_patients_imputed_080922.rds")
+combined <- readRDS("data/drv/clean_weeks_with_relapse_wide_080922.rds")
 
 dat <- imputed$data
 
@@ -35,16 +36,16 @@ process_missing <- function(data) {
 
 dat <- 
     filter(dat, medicine == "bup") |> 
-    select(who, all_of(demog), all_of(comorbidities)) |> 
+    select(who, project, all_of(demog), all_of(comorbidities)) |> 
     mutate(sex = if_else(sex == "female", 1, 0)) |> 
     process_missing()
 
+A <- glue("wk{2:11}.dose_increase_this_week")
 W <- names(dat)[-1]
-A <- glue("wk{3:11}.dose_increase_this_week")
-L <- lapply(3:11, \(x) c(glue("wk{x-1}.dose_this_week"), glue("wk{x}.use_this_week")))
-Y <- glue("wk{4:12}.relapse_this_week")
+L <- lapply(2:11, \(x) c(glue("wk{x-1}.dose_this_week"), glue("wk{x}.use_this_week")))
+Y <- glue("wk{3:12}.relapse_this_week")
 
-sl <- c("SL.glm", "SL.xgboost", "SL.earth", "SL.mean")
+sl <- c("SL.glm", "SL.lightgbm", "SL.earth", "SL.mean")
 
 dat <- left_join(bup, dat)
 
@@ -53,28 +54,30 @@ W <- names(baseline)
 
 dat <- cbind(baseline, dat[, c(A, unlist(L), Y)])
 
-# sem <- Npsem$new(W, L, A, Y)
-# d <- odtr(dat, sem, 1, sl, sl, "binomial", TRUE)
-# 
-# saveRDS(d, "data/drv/optimal-rule.rds")
-d <- readRDS("data/drv/optimal-rule-cf.rds")
+sem <- Npsem$new(W, L, A, Y)
+d <- odtr(dat, sem, 1, sl, sl, "binomial", TRUE)
+
+saveRDS(d, "data/drv/optimal-rule-030823.rds")
+# d <- readRDS("data/drv/optimal-rule-cf.rds")
 
 shifted <- dat
 for (a in A) {
     shifted[[a]] <- d[, a]
 }
 
-future::plan(future::multisession)
+plan(multisession, workers = 10)
+
 estims <- lmtp_sdr(
     dat,
     A, Y, W, L,
     shifted = shifted,
     outcome_type = "survival",
-    folds = 1,
+    folds = 10,
     learners_outcome = sl,
     learners_trt = sl,
     k = 1
 )
 
-future::plan(future::sequential)
-saveRDS(estims, "data/drv/survival-combined-odtr.rds")
+plan(sequential)
+
+saveRDS(estims, "data/drv/survival-combined-odtr-030823.rds")
