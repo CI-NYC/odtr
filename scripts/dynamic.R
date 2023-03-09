@@ -23,6 +23,10 @@ colnames(condA) <- A
 condB <- bup[, glue("wk{2:11}.dose_this_week")] < 32
 colnames(condB) <- A
 
+# Was dose under the dose threshold? 
+condC <- bup[, glue("wk{2:11}.dose_this_week")] < 16
+colnames(condC) <- A
+
 demog <- c("sex", "age", "xrace")
 
 comorbidities <- c(
@@ -55,7 +59,7 @@ W <- names(dat)[-1]
 L <- lapply(2:11, \(x) c(glue("wk{x-1}.dose_this_week"), glue("wk{x}.use_this_week")))
 Y <- glue("wk{3:12}.relapse_this_week")
 
-sl <- c("SL.glm", "SL.lightgbm", "SL.earth", "SL.mean")
+sl <- c("SL.glm", "SL.mean", "SL.lightgbm", "SL.glmnet", "SL.earth")
 
 dat <- left_join(bup, dat)
 
@@ -65,16 +69,14 @@ W <- names(baseline)
 dat <- cbind(baseline, dat[, c(A, unlist(L), Y)])
 
 dynamic <- dat
-dynamic[, A] <- apply(condA & condB, 2, \(x) as.numeric(x), simplify = FALSE)
-  
-plan(multisession, workers = 10) 
+dynamic[, A] <- apply(condC | (condB & condA), 2, \(x) as.numeric(x), simplify = FALSE)
 
 estims <- lmtp_sdr(
     dat, 
     A, Y, W, L,
     shifted = dynamic, 
     outcome_type = "survival", 
-    folds = 10, 
+    folds = 1, 
     learners_outcome = sl, 
     learners_trt = sl
 )
@@ -84,12 +86,10 @@ constant <- lmtp_sdr(
     A, Y, W, L,
     shift = static_binary_off, 
     outcome_type = "survival", 
-    folds = 10, 
+    folds = 1, 
     learners_outcome = sl, 
     learners_trt = sl
 )
 
-plan(sequential)
-
-saveRDS(estims, "data/drv/survival-combined-dynamic-030823.rds")
-saveRDS(constant, "data/drv/survival-combined-constant-030823.rds")
+saveRDS(estims, "data/drv/survival-combined-dynamic-030923.rds")
+saveRDS(constant, "data/drv/survival-combined-constant-030923.rds")

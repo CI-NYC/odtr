@@ -6,9 +6,13 @@ library(kableExtra)
 combined <- readRDS("data/drv/clean_weeks_with_relapse_wide_080922.rds")
 
 d <- readRDS("data/drv/optimal-rule-030823.rds")
-odtr <- readRDS("data/drv/survival-combined-odtr-030823.rds")
-dynamic <- readRDS("data/drv/survival-combined-dynamic-030823.rds")
-constant <- readRDS("data/drv/survival-combined-constant-030823.rds")
+odtr <- readRDS("data/drv/survival-combined-odtr-030923.rds")
+dynamic <- readRDS("data/drv/survival-combined-dynamic-030923.rds")
+constant <- readRDS("data/drv/survival-combined-constant-030923.rds")
+
+lmtp_contrast(constant, ref = odtr, type = "rr")
+lmtp_contrast(constant, ref = dynamic, type = "rr")
+lmtp_contrast(dynamic, ref = odtr, type = "rr")
 
 bup <- filter(combined, medicine == "bup")
 
@@ -23,8 +27,12 @@ colnames(condA) <- A
 condB <- bup[, glue("wk{2:11}.dose_this_week")] < 32
 colnames(condB) <- A
 
+# Was dose under the dose threshold? 
+condC <- bup[, glue("wk{2:11}.dose_this_week")] < 16
+colnames(condC) <- A
+
 d_dynamic <- bup[, A]
-d_dynamic[, A] <- apply(condA & condB, 2, \(x) as.numeric(x), simplify = FALSE)
+d_dynamic[, A] <- apply(condC | (condA & condB), 2, \(x) as.numeric(x), simplify = FALSE)
 
 # Counts for following a strategy
 strategy_n <- function(x) {
@@ -100,8 +108,8 @@ data.frame(Variable = c("constant", "dynamic", "odtr"), Visualization = "") |>
 # \toprule
 # Variable & Visualization\\
 # \midrule
-# constant & \includegraphics[width=0.67in, height=0.17in]{file:////Users/ntw2117/Documents/sdaepi/odtr/figures/pointrange_ca0cca1b506.pdf}\\
-# dynamic & \includegraphics[width=0.67in, height=0.17in]{file:////Users/ntw2117/Documents/sdaepi/odtr/figures/pointrange_ca0c3bec2172.pdf}\\
-# odtr & \includegraphics[width=0.67in, height=0.17in]{file:////Users/ntw2117/Documents/sdaepi/odtr/figures/pointrange_ca0c60d1ee0.pdf}\\
+# constant & \includegraphics[width=0.67in, height=0.17in]{file:////Users/ntw2117/Documents/sdaepi/odtr/figures/pointrange_1149153bc8b24.pdf}\\
+# dynamic & \includegraphics[width=0.67in, height=0.17in]{file:////Users/ntw2117/Documents/sdaepi/odtr/figures/pointrange_114912720dc10.pdf}\\
+# odtr & \includegraphics[width=0.67in, height=0.17in]{file:////Users/ntw2117/Documents/sdaepi/odtr/figures/pointrange_1149142506386.pdf}\\
 # \bottomrule
 # \end{tabular}
