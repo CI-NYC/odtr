@@ -1,85 +1,80 @@
-crossFitQ0 <- function(data, y, a, vars, t, Npsem, learners, folds, outcome_type = c("binomial", "continuous")) {
-    Q0 <- matrix(nrow = nrow(data), ncol = 3)
-    fits <- list()
-    for (v in seq_along(folds)) {
-        train <- origami::training(data, folds[[v]])
-        valid0 <- valid1 <- valid <- origami::validation(data, folds[[v]])
+crossFitQ <- function(data, g, Npsem, learners, folds, outcome_type = c("binomial", "continuous"), maximize = TRUE) {
+    tau <- length(Npsem$A)
+    
+    Q0 <- lapply(1:3, function(x) matrix(nrow = nrow(data), ncol = tau))
+    m <- matrix(nrow = nrow(data), ncol = tau + 1)
+    m[, tau + 1] <- data[[Npsem$Y]]
+    
+    A_opt <- matrix(nrow = nrow(data), ncol = tau)
+    
+    for (t in tau:1) {
+        . <- data
+        if (t == tau) {
+            y <- Npsem$Y
+            vars <- Npsem$history("Y")
+            type <- match.arg(outcome_type)
+        } else {
+            y <- g("tmp_Yd_{t+1}")
+            .[[y]] <- m[, t + 1]
+            vars <- Npsem$history("L", t + 1)
+            type <- "continuous"
+        }
         
-        risk_train <- at_risk(train, Npsem, t)
-        risk_valid <- at_risk(valid, Npsem, t)
+        a_r <- at_risk(., Npsem, t)
         
-        valid0[[a]] <- 0
-        valid1[[a]] <- 1
-
-        preds <- 
-            crossFit(
-                train[risk_train, ], 
-                list(valid[risk_valid, ], valid0[risk_valid, ], valid1[risk_valid, ]), 
-                y, vars, match.arg(outcome_type), learners, TRUE
-            )
-
-        fits[[v]] <- preds$fit
+        valid1 <- valid0 <- .
+        valid0[[Npsem$A[t]]] <- 0
+        valid1[[Npsem$A[t]]] <- 1
         
-        Q0[folds[[v]]$validation_set[risk_valid], 1] <- preds$preds[[1]]
-        Q0[folds[[v]]$validation_set[risk_valid], 2] <- preds$preds[[2]]
-        Q0[folds[[v]]$validation_set[risk_valid], 3] <- preds$preds[[3]]
+        fit <- crossFit(
+            .[a_r, ], 
+            list(.[a_r, ], valid0[a_r, ], valid1[a_r, ]), 
+            y, vars, type, learners, TRUE
+        )
         
-        Q0[folds[[v]]$validation_set[!risk_valid], 1] <- 0
-        Q0[folds[[v]]$validation_set[!risk_valid], 2] <- 0
-        Q0[folds[[v]]$validation_set[!risk_valid], 3] <- 0
-    } 
-    colnames(Q0) <- c("A=a", "A=0", "A=1")
-    list(
-        Q0 = Q0, 
-        fits = fits
-    )
-}
-
-crossFitQv <- function(data, g, Q0, t, Npsem, learners, folds) {
-    Qv <- matrix(nrow = nrow(data), ncol = 1)
-    for (v in seq_along(folds)) {
-        train <- origami::training(data, folds[[v]])
-        valid <- origami::validation(data, folds[[v]])
-        g_train <- origami::training(g, folds[[v]])
-        Q0_train <- origami::training(Q0, folds[[v]])
-
-        risk_train <- at_risk(train, Npsem, t)
-        risk_valid <- at_risk(valid, Npsem, t)
-
-        A <- train[[Npsem$A[t]]][risk_train]
-        Y <- train[[Npsem$Y]][risk_train]
+        Q0[[1]][a_r, t] <- fit$preds[[1]];  Q0[[1]][!a_r, t] <- 0
+        Q0[[2]][a_r, t] <- fit$preds[[2]];  Q0[[2]][!a_r, t] <- 0
+        Q0[[3]][a_r, t] <- fit$preds[[3]];  Q0[[3]][!a_r, t] <- 0
         
-        H <- g_train[risk_train, t]
-        H <- A*(1 / H) + (1 - A)*(1 / (1 - H))
+        . <- cbind(.[, c(Npsem$W, Npsem$L[[t]])], 
+                   tmp_pseudo_blip_D = transform(g, t, data[, Npsem$A], A_opt, m, Q0[[1]], Q0[[2]], Q0[[3]]))
         
-        D1 <- (H * (Y - Q0_train[risk_train, "A=a"])) + Q0_train[risk_train, "A=1"] - Q0_train[risk_train, "A=0"]
-
-        train[risk_train, "tmp_psuedo_D_blip"] <- D1
-
-        Qv[folds[[v]]$validation_set[risk_valid], 1] <-
-            crossFit(
-                train[risk_train, ],
-                list(valid[risk_valid, ]),
-                "tmp_psuedo_D_blip",
-                c(Npsem$W, Npsem$L[[t]]),
-                "continuous",
-                learners
-            )[[1]]
+        mtilde <- crossFit(.[a_r, ],
+                           list(.[a_r, ]),
+                           "tmp_pseudo_blip_D",
+                           c(Npsem$W, Npsem$L[[t]]),
+                           "continuous",
+                           learners)[[1]]
+        
+        if (maximize) {
+            A_opt[, t] <- ifelse(mtilde > 0, 1, 0) 
+        } else {
+            A_opt[, t] <- ifelse(mtilde < 0, 1, 0)
+        }
+        
+        . <- data
+        .[[Npsem$A[t]]][a_r] <- A_opt[, t][a_r]
+        m[a_r, t] <- predictt(fit$fit, .[a_r, ])
+        m[!a_r, t] <- 0
     }
-    Qv
+    
+    A_opt
 }
 
-addYd_t <- function(data, Npsem, OdtrA_t, Q0_tFits, folds, t) {
-    Yd_t <- matrix(nrow = nrow(data), ncol = 1)
-    for (v in seq_along(folds)) {
-        valid <- origami::validation(data, folds[[v]])
-        risk <- at_risk(valid, Npsem, t)
-        valid[[Npsem$A[t]]][risk] <- origami::validation(OdtrA_t, folds[[v]])[risk]
-        
-        Yd_t[folds[[v]]$validation_set[risk], 1] <- predictt(Q0_tFits[[v]], valid[risk, ])
-        Yd_t[folds[[v]]$validation_set[!risk], 1] <- 0
-    } 
+transform <- function(g, t, A, Aopt, ytilde, QA, Q0, Q1) {
+    tau <- ncol(QA)
+    wts <- matrix(1, nrow = nrow(g), ncol = length(1:tau))
+    
+    wts[, t] <- A[, t]*(1 / g[, t]) + (1 - A[, t])*(1 / (1 - g[, t]))
+    if (t < tau) {
+        for (s in (t + 1):tau) {
+            wts[, s] <- as.numeric(A[, s] == Aopt[, s]) / g[, s]
+        }
+    }
 
-    data[[g("tmp_Yd_{t}")]] <- Yd_t[, 1]
-    data
+    wts <- apply(wts, 1, prod)
+    m <- (ytilde[, (t + 1):(tau + 1), drop = FALSE] - QA[, t:tau, drop = FALSE]) + 
+        Q1[, t:tau, drop = FALSE] - Q0[, t:tau, drop = FALSE]
+    
+    rowSums(wts * m)
 }

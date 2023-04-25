@@ -38,32 +38,7 @@ odtr <- function(data, Npsem, V, g_learner = "SL.glm", Q_learner = "SL.glm",
     
     folds <- make_folds(tmp, V)
     g0 <- crossFitg0(tmp, Npsem, g_learner, folds)
-    
-    A_opt <- matrix(nrow = nrow(data), ncol = length(Npsem$A))
-    for (t in length(Npsem$A):1) {
-        if (t == length(Npsem$A)) {
-            y <- Npsem$Y
-            vars <- Npsem$history("Y")
-            type <- match.arg(type)
-        } else {
-            y <- g("tmp_Yd_{t+1}")
-            vars <- Npsem$history("L", t + 1)
-            type <- "continuous"
-        }
-
-        Q0 <- crossFitQ0(tmp, y, Npsem$A[t], vars, t, Npsem, Q_learner, folds, type)
-        Qv <- crossFitQv(tmp, g0, Q0$Q0, t, Npsem, Q_learner, folds)
-        
-        if (maximize) {
-            A_opt[, t] <- ifelse(Qv[, 1] > 0, 1, 0) 
-        } else {
-            A_opt[, t] <- ifelse(Qv[, 1] < 0, 1, 0)
-        }
-
-        if (t != 1) {
-            tmp <- addYd_t(tmp, Npsem, A_opt[, t], Q0$fits, folds, t)
-        }
-    }
+    A_opt <- crossFitQ(tmp, g0, Npsem, Q_learner, folds, "binomial")
     
     colnames(A_opt) <- Npsem$A
     as.data.frame(A_opt)
