@@ -26,26 +26,26 @@ crossFitQ <- function(data, g, Npsem, learners, folds, outcome_type = c("binomia
         valid0[[Npsem$A[t]]] <- 0
         valid1[[Npsem$A[t]]] <- 1
         
-        fit <- crossFit(
-            .[a_r, ], 
-            list(.[a_r, ], valid0[a_r, ], valid1[a_r, ]), 
-            y, vars, type, learners, TRUE
-        )
-        
+        fit <- mlr3superlearner(.[a_r, c(vars, y)], 
+                                y, 
+                                learners, 
+                                type, 
+                                newdata = list(.[a_r, ], valid0[a_r, ], valid1[a_r, ]))
+
         Q0[[1]][a_r, t] <- fit$preds[[1]];  Q0[[1]][!a_r, t] <- 0
         Q0[[2]][a_r, t] <- fit$preds[[2]];  Q0[[2]][!a_r, t] <- 0
         Q0[[3]][a_r, t] <- fit$preds[[3]];  Q0[[3]][!a_r, t] <- 0
         
+        vars <- setdiff(vars, Npsem$A[t])
         . <- cbind(.[, vars], 
                    tmp_pseudo_blip_D = transform(g, t, data[, Npsem$A], A_opt, m, Q0[[1]], Q0[[2]], Q0[[3]]))
         
-        mtilde <- crossFit(.[a_r, ],
-                           list(.[a_r, ]),
-                           "tmp_pseudo_blip_D",
-                           c(Npsem$W, Npsem$L[[t]]),
-                           "continuous",
-                           learners)[[1]]
-        
+        mtilde <- mlr3superlearner(.[a_r, ], 
+                                   "tmp_pseudo_blip_D", 
+                                   learners, 
+                                   "continuous", 
+                                   newdata = list(.[a_r, ]))$preds[[1]]
+
         if (maximize) {
             A_opt[a_r, t] <- ifelse(mtilde > 0, 1, 0) 
         } else {
@@ -54,11 +54,11 @@ crossFitQ <- function(data, g, Npsem, learners, folds, outcome_type = c("binomia
         
         . <- data
         .[[Npsem$A[t]]][a_r] <- A_opt[, t][a_r]
-        m[a_r, t] <- predictt(fit$fit, .[a_r, ])
+        m[a_r, t] <- predict(fit, .[a_r, ])
         m[!a_r, t] <- 0
     }
     
-    A_opt
+    list(A_opt = A_opt, m = m, Q_a = Q0[[1]])
 }
 
 transform <- function(g, t, A, Aopt, ytilde, QA, Q0, Q1) {
@@ -88,12 +88,5 @@ transform <- function(g, t, A, Aopt, ytilde, QA, Q0, Q1) {
 
 ratio_sdr <- function(g, t, tau) {
     if ((t + 1) > tau) return(g[, tau])
-    
-    out <- t(apply(g[, t:tau, drop = FALSE], 1, cumprod))
-    
-    # if (t != tau - 1) {
-    #     return(t(out))
-    # }
-    
-    out
+    t(apply(g[, t:tau, drop = FALSE], 1, cumprod))
 }

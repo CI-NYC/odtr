@@ -10,8 +10,13 @@ crossFitg0 <- function(data, Npsem, learners, folds) {
             risk <- at_risk(valid, Npsem, t)
             valid <- valid[risk, ]
             
-            g0[folds[[v]]$validation_set[risk], t] <- 
-                crossFit(train, list(valid), Npsem$A[t], Npsem$history("A", t), "binomial", learners)[[1]]
+            fit <- mlr3superlearner::mlr3superlearner(train[, c(Npsem$history("A", t), Npsem$A[t])], 
+                                                      Npsem$A[t], 
+                                                      learners, 
+                                                      "binomial", 
+                                                      newdata = list(valid))
+            
+            g0[folds[[v]]$validation_set[risk], t] <- fit$preds[[1]]
         } 
     }
     g0

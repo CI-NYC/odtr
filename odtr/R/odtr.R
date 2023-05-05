@@ -7,24 +7,26 @@
 #'  An \code{Npsem} object 
 #' @param V \[\code{integer}\]\cr
 #'  Number of folds for cross-fitting
-#' @param g_learner \[\code{character}\]\cr A vector of \code{SuperLearner} algorithms 
-#'  for estimation of the propensity score. Default is \code{"SL.glm"}, a main effects GLM.
-#' @param Q_learner \[\code{character}\]\cr A vector of \code{SuperLearner} algorithms 
-#'  for estimation of the outcome regression. Default is \code{"SL.glm"}, a main effects GLM.
+#' @param g_learner \[\code{character}\]\cr A vector of \code{mlr3superlearner} algorithms 
+#'  for estimation of the propensity score. Default is \code{"glm"}, a main effects GLM.
+#' @param Q_learner \[\code{character}\]\cr A vector of \code{mlr3superlearner} algorithms 
+#'  for estimation of the outcome regression. Default is \code{"glm"}, a main effects GLM.
 #' @param type \[\code{character(1)}\]\cr
 #'  Outcome variable type (i.e., continuous, binomial).
 #' @param maximize \[\code{logical(1)}\]\cr
 #'  Should the optimal treatment maximize (or minimize) the outcome?
 #'
-#' @return A \code{data.frame} of the optimal treatment decisions
+#' @return A \code{list} containing optimal treatment assignment and the estimated mean value of
+#'  the outcome under the optimal treatment rule. 
 #' @export
 #'
 #' @examples
-#' dat <- sampleLuedtke2015(1e3)
+#' dat <- odtr_sim(1e3)
 #' sem <- Npsem$new(paste0("W", 1:4), A = c("A1", "A2"), Y = "Y")
-#' optimal <- odtr(dat, sem, 1, "SL.glm", "SL.glm", "binomial")
-odtr <- function(data, Npsem, V, g_learner = "SL.glm", Q_learner = "SL.glm", 
+#' optimal <- odtr(dat, sem, 1, "glm", "glm", "binomial")
+odtr <- function(data, Npsem, V, g_learner = "glm", Q_learner = "glm", 
                  type = c("binomial", "continuous"), maximize = TRUE) {
+    require("mlr3superlearner")
     checkmate::assertDataFrame(data[, Npsem$all_vars()])
     checkmate::assertR6(Npsem, "Npsem")
     checkmate::assertNumber(V, lower = 1, upper = nrow(data) - 1)
@@ -38,8 +40,29 @@ odtr <- function(data, Npsem, V, g_learner = "SL.glm", Q_learner = "SL.glm",
     
     folds <- make_folds(tmp, V)
     g0 <- crossFitg0(tmp, Npsem, g_learner, folds)
-    A_opt <- crossFitQ(tmp, g0, Npsem, Q_learner, folds, "binomial", maximize)
+    vals <- crossFitQ(tmp, g0, Npsem, Q_learner, folds, "binomial", maximize)
     
-    colnames(A_opt) <- Npsem$A
-    as.data.frame(A_opt)
+    inflnce <- eif(data[, Npsem$A], vals$A_opt, g0, vals$m, vals$Q_a)
+    
+    colnames(vals$A_opt) <- Npsem$A
+    se <- sqrt(var(inflnce) / nrow(data))
+    list(psi = mean(inflnce), 
+         std.error = se,
+         conf.low = mean(inflnce) - qnorm(0.975)*se, 
+         conf.high = mean(inflnce) + qnorm(0.975)*se, 
+         A_opt = data.table::as.data.table(vals$A_opt))
+}
+
+eif <- function(A, A_opt, g, mtilde, Q_a, Q_0, Q_1) {
+    tau <- ncol(Q_a)
+    r <- matrix(1, nrow = nrow(g), ncol = length(1:tau))
+    
+    t <- 1
+    for (s in t:tau) {
+        r[, s] <- as.numeric(A[, s] == A_opt[, s]) / g[, s]
+        r[is.na(r[, s]), s] <- 0
+    }
+    
+    m <- mtilde[, (t + 1):(tau + 1), drop = FALSE] - Q_a[, t:tau, drop = FALSE]
+    rowSums(r * m, na.rm = TRUE) + mtilde[, t]
 }
