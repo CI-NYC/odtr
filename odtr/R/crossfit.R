@@ -24,7 +24,8 @@ regress <- function(train, y, x, type, learners) {
     
     fit <- SuperLearner::SuperLearner(
         train[[y]], train[, x], family = family[[1]], SL.library = learners,
-        method = "method.CC_LS",
+        # method = "method.CC_LS",
+        method = "method.NNLS",
         env = environment(SuperLearner::SuperLearner)
     )
     

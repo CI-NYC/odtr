@@ -36,7 +36,7 @@ crossFitQ <- function(data, g, Npsem, learners, folds, outcome_type = c("binomia
         Q0[[2]][a_r, t] <- fit$preds[[2]];  Q0[[2]][!a_r, t] <- 0
         Q0[[3]][a_r, t] <- fit$preds[[3]];  Q0[[3]][!a_r, t] <- 0
         
-        . <- cbind(.[, c(Npsem$W, Npsem$L[[t]])], 
+        . <- cbind(.[, vars], 
                    tmp_pseudo_blip_D = transform(g, t, data[, Npsem$A], A_opt, m, Q0[[1]], Q0[[2]], Q0[[3]]))
         
         mtilde <- crossFit(.[a_r, ],
@@ -47,9 +47,9 @@ crossFitQ <- function(data, g, Npsem, learners, folds, outcome_type = c("binomia
                            learners)[[1]]
         
         if (maximize) {
-            A_opt[, t] <- ifelse(mtilde > 0, 1, 0) 
+            A_opt[a_r, t] <- ifelse(mtilde > 0, 1, 0) 
         } else {
-            A_opt[, t] <- ifelse(mtilde < 0, 1, 0)
+            A_opt[a_r, t] <- ifelse(mtilde < 0, 1, 0)
         }
         
         . <- data
@@ -69,12 +69,31 @@ transform <- function(g, t, A, Aopt, ytilde, QA, Q0, Q1) {
     if (t < tau) {
         for (s in (t + 1):tau) {
             wts[, s] <- as.numeric(A[, s] == Aopt[, s]) / g[, s]
+            wts[is.na(wts[, s]), s] <- 0
         }
     }
 
-    wts <- apply(wts, 1, prod)
-    m <- (ytilde[, (t + 1):(tau + 1), drop = FALSE] - QA[, t:tau, drop = FALSE]) + 
-        Q1[, t:tau, drop = FALSE] - Q0[, t:tau, drop = FALSE]
+    r <- ratio_sdr(wts, t, tau)
+    m <- ytilde[, (t + 1):(tau + 1), drop = FALSE] - QA[, t:tau, drop = FALSE]
+    eval1 <- rowSums(r * m, na.rm = TRUE) + Q1[, t] - Q0[, t]
+    # m <- rep(0, nrow(wts))
+    # for (s in t:tau) {
+    #     m <- m + (apply(wts[, t:s, drop = F], 1, prod) *
+    #                   (ytilde[, s + 1, drop = FALSE] - QA[, s, drop = FALSE]))
+    # }
+    # m <- m + (Q1[, t, drop = FALSE] - Q0[, t, drop = FALSE])
+    # eval2 <- as.vector(m)
+    eval1
+}
+
+ratio_sdr <- function(g, t, tau) {
+    if ((t + 1) > tau) return(g[, tau])
     
-    rowSums(wts * m)
+    out <- t(apply(g[, t:tau, drop = FALSE], 1, cumprod))
+    
+    # if (t != tau - 1) {
+    #     return(t(out))
+    # }
+    
+    out
 }

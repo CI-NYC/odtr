@@ -60,6 +60,7 @@ L <- lapply(2:11, \(x) c(glue("wk{x-1}.dose_this_week"), glue("wk{x}.use_this_we
 Y <- glue("wk{3:12}.relapse_this_week")
 
 sl <- c("SL.glm", "SL.mean", "SL.lightgbm", "SL.glmnet", "SL.earth")
+sl <- c("SL.glm", "SL.mean", "SL.lightgbm", "SL.glmnet")
 
 dat <- left_join(bup, dat)
 

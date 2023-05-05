@@ -46,6 +46,8 @@ L <- lapply(2:11, \(x) c(glue("wk{x-1}.dose_this_week"), glue("wk{x}.use_this_we
 Y <- glue("wk{3:12}.relapse_this_week")
 
 sl <- c("SL.glm", "SL.mean", "SL.lightgbm", "SL.glmnet", "SL.earth")
+# sl <- c("SL.glm", "SL.mean", "SL.lightgbm", "SL.earth")
+sl <- c("SL.glm", "SL.mean", "SL.lightgbm", "SL.glmnet")
 
 dat <- left_join(bup, dat)
 
@@ -54,11 +56,11 @@ W <- names(baseline)
 
 dat <- cbind(baseline, dat[, c(A, unlist(L), Y)])
 
-# sem <- Npsem$new(W, L, A, Y)
-# d <- odtr(dat, sem, 1, sl, sl, "binomial", TRUE)
-# 
-# saveRDS(d, "data/drv/optimal-rule-030823.rds")
-d <- readRDS("data/drv/optimal-rule-030823.rds")
+sem <- Npsem$new(W, L, A, Y)
+d <- odtr(dat, sem, 1, sl, sl, "binomial", FALSE)
+
+saveRDS(d, "data/drv/optimal-rule-042823.rds")
+# d <- readRDS("data/drv/optimal-rule-042823.rds")
 
 shifted <- dat
 for (a in A) {
@@ -76,4 +78,4 @@ estims <- lmtp_sdr(
     k = 1
 )
 
-saveRDS(estims, "data/drv/survival-combined-odtr-030923.rds")
+saveRDS(estims, "data/drv/survival-combined-odtr-042823.rds")

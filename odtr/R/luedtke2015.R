@@ -78,10 +78,15 @@ sampleLuedtke2015 <- function(n) {
         A1 = A1,
         A2 = A2,
         d = c("00", "01", "10", "11")[apply(cf_probs, 1, which.max)],
-        Y = Y
+        Y = Y, 
+        Ymax = apply(cf_probs, 1, max)
     )
 }
 
 Qbar0 <- function(A, W) {
-    0.4 + (-0.4 * A$A1 - A$A2 * W$W3 - 1.5 * A$A1 * sign(W$W1) + 0.08 * A$A1 * A$A2 + A$A2 * (W$W3)^2 - 1.5 * A$A1 * W$W1 - 0.5 * A$A1 * (W$W2) ^ 2 - 0.1 * A$A2) * 0.069
+    plogis(0.4 - 0.4*A$A1 - A$A2*W$W3 - 1.5*A$A1*W$W1 + 0.08*A$A1*A$A2*W$W3)
 }
+
+# Qbar0 <- function(A, W) {
+#     0.4 + (-0.4 * A$A1 - A$A2 * W$W3 - 1.5 * A$A1 * sign(W$W1) + 0.08 * A$A1 * A$A2 + A$A2 * (W$W3)^2 - 1.5 * A$A1 * W$W1 - 0.5 * A$A1 * (W$W2) ^ 2 - 0.1 * A$A2) * 0.069
+# }

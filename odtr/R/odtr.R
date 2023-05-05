@@ -22,7 +22,7 @@
 #' @examples
 #' dat <- sampleLuedtke2015(1e3)
 #' sem <- Npsem$new(paste0("W", 1:4), A = c("A1", "A2"), Y = "Y")
-#' optimal <- odtr(dat, sem, 1, "SL.glm", "Sl.glm", "binomial")
+#' optimal <- odtr(dat, sem, 1, "SL.glm", "SL.glm", "binomial")
 odtr <- function(data, Npsem, V, g_learner = "SL.glm", Q_learner = "SL.glm", 
                  type = c("binomial", "continuous"), maximize = TRUE) {
     checkmate::assertDataFrame(data[, Npsem$all_vars()])
@@ -38,7 +38,7 @@ odtr <- function(data, Npsem, V, g_learner = "SL.glm", Q_learner = "SL.glm",
     
     folds <- make_folds(tmp, V)
     g0 <- crossFitg0(tmp, Npsem, g_learner, folds)
-    A_opt <- crossFitQ(tmp, g0, Npsem, Q_learner, folds, "binomial")
+    A_opt <- crossFitQ(tmp, g0, Npsem, Q_learner, folds, "binomial", maximize)
     
     colnames(A_opt) <- Npsem$A
     as.data.frame(A_opt)
