@@ -1,5 +1,6 @@
 crossFitg0 <- function(data, Npsem, learners, folds) {
     g0 <- matrix(nrow = nrow(data), ncol = length(Npsem$A))
+    bnd <- 5 / sqrt(nrow(data)) / log(nrow(data))
     for (t in 1:length(Npsem$A)) {
         for (v in seq_along(folds)) {
             train <- origami::training(data, folds[[v]])
@@ -14,9 +15,10 @@ crossFitg0 <- function(data, Npsem, learners, folds) {
                                                       Npsem$A[t], 
                                                       learners, 
                                                       "binomial", 
+                                                      10,
                                                       newdata = list(valid))
-            
-            g0[folds[[v]]$validation_set[risk], t] <- fit$preds[[1]]
+
+            g0[folds[[v]]$validation_set[risk], t] <- pmax(pmin(fit$preds[[1]], 1 - bnd), bnd)
         } 
     }
     g0

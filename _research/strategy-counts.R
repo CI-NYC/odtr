@@ -5,7 +5,7 @@ library(kableExtra)
 
 combined <- readRDS("data/drv/clean_weeks_with_relapse_wide_080922.rds")
 
-d <- readRDS("data/drv/optimal-rule-042823.rds")
+d <- readRDS("data/drv/optimal-rule-050523.rds")
 odtr <- readRDS("data/drv/survival-combined-odtr-042823.rds")
 dynamic <- readRDS("data/drv/survival-combined-dynamic-030923.rds")
 constant <- readRDS("data/drv/survival-combined-constant-030923.rds")

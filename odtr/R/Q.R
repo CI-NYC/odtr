@@ -11,15 +11,14 @@ crossFitQ <- function(data, g, Npsem, learners, folds, outcome_type = c("binomia
         . <- data
         if (t == tau) {
             y <- Npsem$Y
-            vars <- Npsem$history("Y")
+            # vars <- Npsem$history("Y")
             type <- match.arg(outcome_type)
         } else {
             y <- g("tmp_Yd_{t+1}")
             .[[y]] <- m[, t + 1]
-            vars <- Npsem$history("L", t + 1)
             type <- "continuous"
         }
-        
+        vars <- Npsem$history("L", t + 1)
         a_r <- at_risk(., Npsem, t)
         
         valid1 <- valid0 <- .
@@ -30,12 +29,14 @@ crossFitQ <- function(data, g, Npsem, learners, folds, outcome_type = c("binomia
                                 y, 
                                 learners, 
                                 type, 
+                                10,
                                 newdata = list(.[a_r, ], valid0[a_r, ], valid1[a_r, ]))
 
         Q0[[1]][a_r, t] <- fit$preds[[1]];  Q0[[1]][!a_r, t] <- 0
         Q0[[2]][a_r, t] <- fit$preds[[2]];  Q0[[2]][!a_r, t] <- 0
         Q0[[3]][a_r, t] <- fit$preds[[3]];  Q0[[3]][!a_r, t] <- 0
         
+        # vars <- c(Npsem$W, setdiff(vars, Npsem$history("L", t)))
         vars <- setdiff(vars, Npsem$A[t])
         . <- cbind(.[, vars], 
                    tmp_pseudo_blip_D = transform(g, t, data[, Npsem$A], A_opt, m, Q0[[1]], Q0[[2]], Q0[[3]]))
@@ -44,6 +45,7 @@ crossFitQ <- function(data, g, Npsem, learners, folds, outcome_type = c("binomia
                                    "tmp_pseudo_blip_D", 
                                    learners, 
                                    "continuous", 
+                                   10,
                                    newdata = list(.[a_r, ]))$preds[[1]]
 
         if (maximize) {
@@ -73,6 +75,7 @@ transform <- function(g, t, A, Aopt, ytilde, QA, Q0, Q1) {
         }
     }
 
+    wts <- apply(wts, 2, function(x) pmin(x, quantile(x, 0.99, na.rm = T)))
     r <- ratio_sdr(wts, t, tau)
     m <- ytilde[, (t + 1):(tau + 1), drop = FALSE] - QA[, t:tau, drop = FALSE]
     eval1 <- rowSums(r * m, na.rm = TRUE) + Q1[, t] - Q0[, t]

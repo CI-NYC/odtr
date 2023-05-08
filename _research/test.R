@@ -1,4 +1,4 @@
-dat <- sample_sim(5e4)
+dat <- odtr_sim(1e4)
 sem <- Npsem$new(paste0("W", 1:3), A = c("A1", "A2"), Y = "Y")
 opt <- odtr(dat, sem, 1, c("glm", "nnet"), c("glm", "nnet"), "binomial")
 

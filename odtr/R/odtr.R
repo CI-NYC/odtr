@@ -42,15 +42,20 @@ odtr <- function(data, Npsem, V, g_learner = "glm", Q_learner = "glm",
     g0 <- crossFitg0(tmp, Npsem, g_learner, folds)
     vals <- crossFitQ(tmp, g0, Npsem, Q_learner, folds, "binomial", maximize)
     
-    inflnce <- eif(data[, Npsem$A], vals$A_opt, g0, vals$m, vals$Q_a)
-    
     colnames(vals$A_opt) <- Npsem$A
+    inflnce <- eif(data[, Npsem$A], vals$A_opt, g0, vals$m, vals$Q_a)
     se <- sqrt(var(inflnce) / nrow(data))
-    list(psi = mean(inflnce), 
-         std.error = se,
-         conf.low = mean(inflnce) - qnorm(0.975)*se, 
-         conf.high = mean(inflnce) + qnorm(0.975)*se, 
-         A_opt = data.table::as.data.table(vals$A_opt))
+    
+    returns <- list(psi = mean(inflnce), 
+                    std.error = se,
+                    conf.low = mean(inflnce) - qnorm(0.975)*se, 
+                    conf.high = mean(inflnce) + qnorm(0.975)*se, 
+                    A_opt = data.table::as.data.table(vals$A_opt), 
+                    eif = inflnce,
+                    m = vals$m, 
+                    g = g0)
+    class(returns) <- "odtr"
+    returns
 }
 
 eif <- function(A, A_opt, g, mtilde, Q_a, Q_0, Q_1) {
@@ -63,6 +68,7 @@ eif <- function(A, A_opt, g, mtilde, Q_a, Q_0, Q_1) {
         r[is.na(r[, s]), s] <- 0
     }
     
+    r <- apply(r, 2, function(x) pmin(x, quantile(x, 0.99, na.rm = T)))
     m <- mtilde[, (t + 1):(tau + 1), drop = FALSE] - Q_a[, t:tau, drop = FALSE]
     rowSums(r * m, na.rm = TRUE) + mtilde[, t]
 }

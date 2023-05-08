@@ -1,3 +1,4 @@
+#' @export
 Npsem <- R6::R6Class(
     "Npsem",
     public = list(
