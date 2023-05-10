@@ -43,7 +43,7 @@ odtr <- function(data, Npsem, V, g_learner = "glm", Q_learner = "glm",
     vals <- crossFitQ(tmp, g0, Npsem, Q_learner, folds, "binomial", maximize)
     
     colnames(vals$A_opt) <- Npsem$A
-    inflnce <- eif(data[, Npsem$A], vals$A_opt, g0, vals$m, vals$Q_a)
+    inflnce <- eif(data[, Npsem$A, drop = F], vals$A_opt, g0, vals$m, vals$Q_a)
     se <- sqrt(var(inflnce) / nrow(data))
     
     returns <- list(psi = mean(inflnce), 
