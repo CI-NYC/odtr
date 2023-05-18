@@ -1,6 +1,7 @@
 crossFitg0 <- function(data, Npsem, learners, folds) {
     g0 <- matrix(nrow = nrow(data), ncol = length(Npsem$A))
     bnd <- 5 / sqrt(nrow(data)) / log(nrow(data))
+
     for (t in 1:length(Npsem$A)) {
         for (v in seq_along(folds)) {
             train <- origami::training(data, folds[[v]])
@@ -10,22 +11,9 @@ crossFitg0 <- function(data, Npsem, learners, folds) {
             train <- train[at_risk(train, Npsem, t), ]
             risk <- at_risk(valid, Npsem, t)
             valid <- valid[risk, ]
-            
-            .f <- as.formula(paste0(paste0(Npsem$A[t], "~"), paste0(Npsem$history("A", t), collapse = "+")))
-            fit <- mlr3superlearner::mlr3superlearner(train, .f, 
-                                                      learners, 
-                                                      "binomial", 
-                                                      10,
-                                                      newdata = list(valid))
-            
-            # fit <- mlr3superlearner::mlr3superlearner(train[, c(Npsem$history("A", t), Npsem$A[t])], 
-            #                                           Npsem$A[t], 
-            #                                           learners, 
-            #                                           "binomial", 
-            #                                           10,
-            #                                           newdata = list(valid))
-
-            g0[folds[[v]]$validation_set[risk], t] <- pmax(pmin(fit$preds[[1]], 1 - bnd), bnd)
+        
+            fit <- crossFit(train, list(valid), Npsem$A[t], Npsem$history("A", t), "binomial", learners)
+            g0[folds[[v]]$validation_set[risk], t] <- pmax(pmin(fit[[1]], 1 - bnd), bnd)
         } 
     }
     g0

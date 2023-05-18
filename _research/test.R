@@ -18,20 +18,20 @@ library(mlr3extralearners)
 load_all("odtr")
 
 source("_research/sim/gendata.R")
+source_gist("https://gist.github.com/nt-williams/dcebc3a0c17687dacc7356fa34399641")
 
 truth <- {
     tmp <- gendata(1e7)
     mean(tmp$Ymax)
 }
 
-learners <- c("glm", "xgboost", "nnet")
+learners <- c("SL.glm.interaction", "SL.xgboost")
 
-L <- list(c("W1"), 
-          c("L1"))
+L <- list(c("W1"), c("L1"))
 vars <- Npsem$new(L = L, A = c("A1", "A2"), Y = "Y")
 
-tmp <- gendata(1000)
-opt <- odtr(tmp, vars, 1, learners, learners, "binomial")
+tmp <- gendata(1e5)
+opt <- odtr(tmp, vars, 1, "SL.mean", learners, "binomial")
 
 d <- tmp
 tr <- strsplit(tmp$d, "")

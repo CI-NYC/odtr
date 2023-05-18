@@ -17,8 +17,6 @@ Imports:
     checkmate,
     data.table,
     glue,
-    mlr3superlearner (>= 0.1.0),
+    SuperLearner,
     origami,
     R6
-Remotes: 
-    nt-williams/mlr3superlearner

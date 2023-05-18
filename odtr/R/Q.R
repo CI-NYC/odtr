@@ -5,9 +5,8 @@ crossFitQ <- function(data, g, Npsem, learners, folds,
     Q0 <- lapply(1:3, function(x) matrix(nrow = nrow(data), ncol = tau))
     m <- matrix(nrow = nrow(data), ncol = tau + 1)
     m[, tau + 1] <- data[[Npsem$Y]]
-    
+
     A_opt <- matrix(nrow = nrow(data), ncol = tau)
-    
     for (t in tau:1) {
         . <- data
         if (t == tau) {
@@ -24,32 +23,26 @@ crossFitQ <- function(data, g, Npsem, learners, folds,
         valid1 <- valid0 <- .
         valid0[[Npsem$A[t]]] <- 0
         valid1[[Npsem$A[t]]] <- 1
-browser()
-
-        # .f <- as.formula(paste0(y, paste0("~ -1 + .^", ncol(.[a_r, vars]))))
-        # .f <- as.formula(paste0(y, paste0("~ -1 + .^", 2)))
-        .f <- as.formula(paste0(y, "~ -1 + ."))
-        fit <- mlr3superlearner(.[a_r, ], .f, 
-                                learners, 
-                                type, 
-                                10,
-                                newdata = list(.[a_r, ], valid0[a_r, ], valid1[a_r, ]))
+        
+        fit <- crossFit(.[a_r, ], 
+                        list(.[a_r, ], valid0[a_r, ], valid1[a_r, ]), 
+                        y, vars, type, learners, TRUE)
 
         Q0[[1]][a_r, t] <- fit$preds[[1]];  Q0[[1]][!a_r, t] <- 0
         Q0[[2]][a_r, t] <- fit$preds[[2]];  Q0[[2]][!a_r, t] <- 0
         Q0[[3]][a_r, t] <- fit$preds[[3]];  Q0[[3]][!a_r, t] <- 0
         
-        # vars <- setdiff(setdiff(vars, Npsem$A[t]), Npsem$history("L", t))
         vars <- setdiff(vars, Npsem$A[t])
         . <- cbind(.[, vars, drop = F], 
-                   tmp_pseudo_blip_D = transform(g, t, data[, Npsem$A, drop = F], A_opt, m, Q0[[1]], Q0[[2]], Q0[[3]]))
-
-        mtilde <- mlr3superlearner(.[a_r, ], 
-                                   tmp_pseudo_blip_D ~ -1 + ., 
-                                   learners, 
-                                   "continuous", 
-                                   10,
-                                   newdata = list(.[a_r, ]))$preds[[1]]
+                   tmp_pseudo_blip_D = transform(g, t, data[, Npsem$A, drop = F], 
+                                                 A_opt, m, Q0[[1]], Q0[[2]], Q0[[3]]))
+        
+        mtilde <- crossFit(.[a_r, ], 
+                           list(.[a_r, ]), 
+                           "tmp_pseudo_blip_D", 
+                           vars, 
+                           "continuous", 
+                           learners)[[1]]
 
         if (maximize) {
             A_opt[a_r, t] <- ifelse(mtilde > 0, 1, 0) 
@@ -59,7 +52,7 @@ browser()
         
         . <- data
         .[[Npsem$A[t]]][a_r] <- A_opt[, t][a_r]
-        m[a_r, t] <- predict(fit, .[a_r, ])
+        m[a_r, t] <- predictt(fit$fit, .[a_r, ])
         m[!a_r, t] <- 0
     }
     
