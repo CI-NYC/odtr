@@ -78,5 +78,5 @@ for (node in 1:5) {
         learners_trt = sl
     )
     
-    saveRDS(sdr, glue("data/drv/optimal-rule2-{med}-week{tau+1}-lmtp-{node}.rds"))
+    saveRDS(sdr, glue("data/drv/optimal-rule-{med}-week{tau+1}-lmtp-{node}.rds"))
 }

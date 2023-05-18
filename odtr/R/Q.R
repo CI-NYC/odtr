@@ -1,4 +1,5 @@
-crossFitQ <- function(data, g, Npsem, learners, folds, outcome_type = c("binomial", "continuous"), maximize = TRUE) {
+crossFitQ <- function(data, g, Npsem, learners, folds, 
+                      outcome_type = c("binomial", "continuous"), maximize = TRUE) {
     tau <- length(Npsem$A)
     
     Q0 <- lapply(1:3, function(x) matrix(nrow = nrow(data), ncol = tau))
@@ -23,9 +24,12 @@ crossFitQ <- function(data, g, Npsem, learners, folds, outcome_type = c("binomia
         valid1 <- valid0 <- .
         valid0[[Npsem$A[t]]] <- 0
         valid1[[Npsem$A[t]]] <- 1
+browser()
 
-        fit <- mlr3superlearner(.[a_r, c(vars, y)], 
-                                y, 
+        # .f <- as.formula(paste0(y, paste0("~ -1 + .^", ncol(.[a_r, vars]))))
+        # .f <- as.formula(paste0(y, paste0("~ -1 + .^", 2)))
+        .f <- as.formula(paste0(y, "~ -1 + ."))
+        fit <- mlr3superlearner(.[a_r, ], .f, 
                                 learners, 
                                 type, 
                                 10,
@@ -37,11 +41,11 @@ crossFitQ <- function(data, g, Npsem, learners, folds, outcome_type = c("binomia
         
         # vars <- setdiff(setdiff(vars, Npsem$A[t]), Npsem$history("L", t))
         vars <- setdiff(vars, Npsem$A[t])
-        . <- cbind(.[, vars], 
+        . <- cbind(.[, vars, drop = F], 
                    tmp_pseudo_blip_D = transform(g, t, data[, Npsem$A, drop = F], A_opt, m, Q0[[1]], Q0[[2]], Q0[[3]]))
 
         mtilde <- mlr3superlearner(.[a_r, ], 
-                                   "tmp_pseudo_blip_D", 
+                                   tmp_pseudo_blip_D ~ -1 + ., 
                                    learners, 
                                    "continuous", 
                                    10,
