@@ -1,0 +1,15 @@
+---
+title: "Optimal Dynamic Treatment Rules (ODTR) with Time-Varying Data"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Installation
+
+```{r install, eval=FALSE}
+devtools::install_github("nt-williams/odtr/odtr")
+```
+

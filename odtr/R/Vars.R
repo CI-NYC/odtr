@@ -1,6 +1,6 @@
 #' @export
-Npsem <- R6::R6Class(
-    "Npsem",
+Vars <- R6::R6Class(
+    "Vars",
     public = list(
         W = NULL,
         L = NULL,
@@ -25,7 +25,6 @@ Npsem <- R6::R6Class(
                 self$L <- L
             }
 
-            
             checkmate::assertCharacter(Y)
             
             self$A <- A

@@ -1,16 +1,16 @@
-#' Optimal Dynamic Treatment Rules for Multiple Timepoints
+#' Optimal Dynamic Treatment Rules with Time-Varying Data
 #'
 #' @param data \[\code{data.frame}\]\cr
 #'  A \code{data.frame} containing all necessary variables
 #'  for the estimation problem. 
-#' @param Npsem \[\code{R6(Npsem)}\]\cr
-#'  An \code{Npsem} object 
-#' @param V \[\code{integer}\]\cr
+#' @param Vars \[\code{R6(Vars)}\]\cr
+#'  An \code{Vars} object 
+#' @param folds \[\code{integer}\]\cr
 #'  Number of folds for cross-fitting
-#' @param g_learner \[\code{character}\]\cr A vector of \code{mlr3superlearner} algorithms 
-#'  for estimation of the propensity score. Default is \code{"glm"}, a main effects GLM.
-#' @param Q_learner \[\code{character}\]\cr A vector of \code{mlr3superlearner} algorithms 
-#'  for estimation of the outcome regression. Default is \code{"glm"}, a main effects GLM.
+#' @param g_learner \[\code{character}\]\cr 
+#'  A \code{SuperLearner} library
+#' @param Q_learner \[\code{character}\]\cr 
+#'  A \code{SuperLearner} library
 #' @param type \[\code{character(1)}\]\cr
 #'  Outcome variable type (i.e., continuous, binomial).
 #' @param maximize \[\code{logical(1)}\]\cr
@@ -21,36 +21,32 @@
 #' @export
 #'
 #' @examples
-#' dat <- odtr_sim(1e3)
-#' sem <- Npsem$new(paste0("W", 1:4), A = c("A1", "A2"), Y = "Y")
-#' optimal <- odtr(dat, sem, 1, "glm", "glm", "binomial")
-odtr <- function(data, Npsem, V, g_learner = "glm", Q_learner = "glm", 
-                 type = c("binomial", "continuous"), maximize = TRUE) {
-    require("mlr3superlearner")
-    checkmate::assertDataFrame(data[, Npsem$all_vars()])
-    checkmate::assertR6(Npsem, "Npsem")
-    checkmate::assertNumber(V, lower = 1, upper = nrow(data) - 1)
+optimal_rule <- function(data, Vars, folds, g_learner = "glm", Q_learner = "glm", 
+                         type = c("binomial", "continuous"), maximize = TRUE) {
+    checkmate::assertDataFrame(data[, Vars$all_vars()])
+    checkmate::assertR6(Vars, "Vars")
+    checkmate::assertNumber(folds, lower = 1, upper = nrow(data) - 1)
 
     tmp <- data.table::copy(data)
-    if (!is.null(Npsem$risk)) {
-        for (y in c(Npsem$risk, Npsem$Y)) {
+    if (!is.null(Vars$risk)) {
+        for (y in c(Vars$risk, Vars$Y)) {
             data.table::set(tmp, j = y, value = convert_to_surv(tmp[[y]]))
         }
     }
     
-    folds <- make_folds(tmp, V)
-    g0 <- crossFitg0(tmp, Npsem, g_learner, folds)
-    vals <- crossFitQ(tmp, g0, Npsem, Q_learner, folds, "binomial", maximize)
+    folds <- make_folds(tmp, folds)
+    g0 <- crossFitg0(tmp, Vars, g_learner, folds)
+    vals <- crossFitQ(tmp, g0, Vars, Q_learner, folds, match.arg(type), maximize)
     
-    colnames(vals$A_opt) <- Npsem$A
-    inflnce <- eif(data[, Npsem$A, drop = F], vals$A_opt, g0, vals$m, vals$Q_a)
+    colnames(vals$A_opt) <- Vars$A
+    inflnce <- eif(data[, Vars$A, drop = F], vals$A_opt, g0, vals$m, vals$Q_a)
     se <- sqrt(var(inflnce) / nrow(data))
     
     returns <- list(psi = mean(inflnce), 
                     std.error = se,
                     conf.low = mean(inflnce) - qnorm(0.975)*se, 
                     conf.high = mean(inflnce) + qnorm(0.975)*se, 
-                    A_opt = data.table::as.data.table(vals$A_opt), 
+                    A_opt = as.data.frame(vals$A_opt), 
                     eif = inflnce,
                     m = vals$m, 
                     g = g0)

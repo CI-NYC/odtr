@@ -2,7 +2,7 @@ library(lmtp)
 library(glue)
 library(devtools)
 library(future)
-library(mlr3extralearners)
+# library(mlr3extralearners)
 suppressPackageStartupMessages(library(tidyverse))
 
 load_all("odtr")
@@ -24,6 +24,7 @@ task_list <- expand.grid(imp = 1:5,
                          med = med, 
                          stringsAsFactors = FALSE)
 
+ds <- list()
 for (node in 1:5) {
     W <- c(demog, comorbidities)
     task <- task_list[node, ]
@@ -39,11 +40,12 @@ for (node in 1:5) {
     observed <- left_join(visits_wide, baseline)
     observed <- observed[as.character(observed$medicine) == task$med, ]
     
-    plan(multisession, workers = 10)
-    d <- odtr(as.data.frame(observed), sem, 1, learners, learners, "binomial")
-    plan(sequential)
+    #plan(multisession, workers = 10)
+    d <- odtr(as.data.frame(observed), sem, 1, sl, sl, "binomial")
+    #plan(sequential)
     
-    saveRDS(d, glue("data/drv/optimal-rule-{med}-week{tau+1}_{node}.rds"))
+    ds[[node]] <- d
+    # saveRDS(d, glue("data/drv/optimal-rule-{med}-week{tau+1}_{node}.rds"))
 }
 
 for (node in 1:5) {

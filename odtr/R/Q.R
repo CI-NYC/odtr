@@ -1,29 +1,30 @@
-crossFitQ <- function(data, g, Npsem, learners, folds, 
+crossFitQ <- function(data, g, Vars, learners, folds, 
                       outcome_type = c("binomial", "continuous"), maximize = TRUE) {
-    tau <- length(Npsem$A)
+    tau <- length(Vars$A)
     
     Q0 <- lapply(1:3, function(x) matrix(nrow = nrow(data), ncol = tau))
     m <- matrix(nrow = nrow(data), ncol = tau + 1)
-    m[, tau + 1] <- data[[Npsem$Y]]
+    m[, tau + 1] <- data[[Vars$Y]]
 
     A_opt <- matrix(nrow = nrow(data), ncol = tau)
     for (t in tau:1) {
         . <- data
         if (t == tau) {
-            y <- Npsem$Y
+            y <- Vars$Y
             type <- match.arg(outcome_type)
         } else {
             y <- g("tmp_Yd_{t+1}")
             .[[y]] <- m[, t + 1]
             type <- "continuous"
         }
-        vars <- Npsem$history("L", t + 1)
-        a_r <- at_risk(., Npsem, t)
+
+        vars <- Vars$history("L", t + 1)
+        a_r <- at_risk(., Vars, t)
         
         valid1 <- valid0 <- .
-        valid0[[Npsem$A[t]]] <- 0
-        valid1[[Npsem$A[t]]] <- 1
-        
+        valid0[[Vars$A[t]]] <- 0
+        valid1[[Vars$A[t]]] <- 1
+
         fit <- crossFit(.[a_r, ], 
                         list(.[a_r, ], valid0[a_r, ], valid1[a_r, ]), 
                         y, vars, type, learners, TRUE)
@@ -32,9 +33,9 @@ crossFitQ <- function(data, g, Npsem, learners, folds,
         Q0[[2]][a_r, t] <- fit$preds[[2]];  Q0[[2]][!a_r, t] <- 0
         Q0[[3]][a_r, t] <- fit$preds[[3]];  Q0[[3]][!a_r, t] <- 0
         
-        vars <- setdiff(vars, Npsem$A[t])
+        vars <- setdiff(vars, Vars$A[t])
         . <- cbind(.[, vars, drop = F], 
-                   tmp_pseudo_blip_D = transform(g, t, data[, Npsem$A, drop = F], 
+                   tmp_pseudo_blip_D = transform(g, t, data[, Vars$A, drop = F], 
                                                  A_opt, m, Q0[[1]], Q0[[2]], Q0[[3]]))
         
         mtilde <- crossFit(.[a_r, ], 
@@ -51,7 +52,7 @@ crossFitQ <- function(data, g, Npsem, learners, folds,
         }
         
         . <- data
-        .[[Npsem$A[t]]][a_r] <- A_opt[, t][a_r]
+        .[[Vars$A[t]]][a_r] <- A_opt[, t][a_r]
         m[a_r, t] <- predictt(fit$fit, .[a_r, ])
         m[!a_r, t] <- 0
     }
