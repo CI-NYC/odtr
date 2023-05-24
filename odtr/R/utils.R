@@ -1,5 +1,8 @@
 g <- glue::glue
 
+tr <- origami::training
+vl <- origami::validation
+
 at_risk <- function(data, Npsem, tau) {
     if (is.null(Npsem$risk)) {
         return(rep(TRUE, nrow(data)))

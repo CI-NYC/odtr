@@ -37,7 +37,7 @@ optimal_rule <- function(data, Vars, folds, g_learner = "glm", Q_learner = "glm"
     folds <- make_folds(tmp, folds)
     g0 <- crossFitg0(tmp, Vars, g_learner, folds)
     vals <- crossFitQ(tmp, g0, Vars, Q_learner, folds, match.arg(type), maximize)
-    
+
     colnames(vals$A_opt) <- Vars$A
     inflnce <- eif(data[, Vars$A, drop = F], vals$A_opt, g0, vals$m, vals$Q_a)
     se <- sqrt(var(inflnce) / nrow(data))

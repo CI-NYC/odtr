@@ -7,7 +7,6 @@ crossFitg0 <- function(data, Vars, learners, folds) {
             train <- origami::training(data, folds[[v]])
             valid <- origami::validation(data, folds[[v]])
             
-            # Need to handle risk here
             train <- train[at_risk(train, Vars, t), ]
             risk <- at_risk(valid, Vars, t)
             valid <- valid[risk, ]
