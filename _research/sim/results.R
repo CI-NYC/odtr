@@ -8,8 +8,10 @@ res <- read_zip_rds("_research/sim/data/sim.zip") |>
 
 truth <- EYd0(1e7)
 
-group_by(res, n) |> 
+res <- group_by(res, n) |> 
     summarise(psi = mean(psi), 
               abs_bias = abs(mean(psi - truth)), 
               coverage = mean(map2_lgl(conf.low, conf.high, \(l, h) between(truth, l, h)))) |> 
     mutate(rootn_bias = abs_bias * sqrt(n))
+
+saveRDS(res, "_research/sim/data/simulation_results.rds")
