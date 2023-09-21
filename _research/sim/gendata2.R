@@ -9,12 +9,12 @@ Q1 <- function(A1, A2, W1, W2) {
 gendata <- function(n) {
     W1 <- 2*runif(n) - 1
     W2 <- 2*runif(n) - 1
-    A1 <- rbinom(n, 1, 0.5)
+    A1 <- rbinom(n, 1, plogis(0.5 - 1.3*W1 + 0.4*W2))
     u3 <- runif(n)
     W3 <- (2*u3 - 1)*(1.25*A1 + 0.25)
     W3.0 <- (2*u3 - 1)*(0 + 0.25)
     W3.1 <- (2*u3 - 1)*(1.25 + 0.25)
-    A2 <- rbinom(n, 1, 0.5)
+    A2 <- rbinom(n, 1, plogis(0.5 + 0.4*A1 - 1.5*W3))
     
     u <- rnorm(n)
     Y <- Q2(A1, A2, W1, W2, W3) + u

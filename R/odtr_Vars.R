@@ -1,6 +1,5 @@
-#' @export
-Vars <- R6::R6Class(
-    "Vars",
+odtr_Vars <- R6::R6Class(
+    "odtr_Vars",
     public = list(
         W = NULL,
         L = NULL,
@@ -9,11 +8,6 @@ Vars <- R6::R6Class(
         risk = NULL,
         initialize = function(W, L, A, Y) {
             checkmate::assertCharacter(A)
-            
-            # if (!missing(A2)) {
-            #     checkmate::assertCharacter(A2)
-            #     self$A2 <- A2
-            # }
             
             if (!missing(W)) {
                 checkmate::assertCharacter(W, null.ok = TRUE)

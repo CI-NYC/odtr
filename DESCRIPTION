@@ -20,3 +20,7 @@ Imports:
     SuperLearner,
     origami,
     R6
+Depends: 
+    mlr3superlearner (>= 0.1.1)
+Remotes:  
+    nt-williams

@@ -2,7 +2,6 @@ library(lmtp)
 library(glue)
 library(devtools)
 library(future)
-# library(mlr3extralearners)
 suppressPackageStartupMessages(library(tidyverse))
 
 load_all("odtr")
@@ -16,8 +15,8 @@ tau <- 5
 A <- glue("wk{2:tau}.dose_increase_this_week")
 L <- lapply(2:tau, function(x) c(glue("wk{x-1}.dose_this_week"), glue("wk{x}.use_this_week")))
 Y <- glue("wk{3:(tau + 1)}.relapse_this_week")
-learners <- c("glm", "glmnet", "earth", "lightgbm")
-sl <- c("SL.glm", "SL.mean", "SL.lightgbm", "SL.glmnet", "SL.earth")
+# learners <- c("glm", "glmnet", "earth", "lightgbm")
+sl <- c("SL.glm", "SL.mean", "SL.lightgbm", "SL.glmnet", "SL.earth", "SL.bayesglm", "SL.gam", "SL.nnet")
 med <- "bup"
 
 task_list <- expand.grid(imp = 1:5, 
@@ -35,18 +34,17 @@ for (node in 1:5) {
         as.data.frame()
     baseline <- cbind(mice::complete(imputed, task$imp)[, "who", drop = F], baseline[, -1])
     W <- names(baseline[, -1])
-    sem <- Npsem$new(W, L, A, Y)
+    sem <- Vars$new(W, L, A, Y)
     
     observed <- left_join(visits_wide, baseline)
     observed <- observed[as.character(observed$medicine) == task$med, ]
     
-    #plan(multisession, workers = 10)
-    d <- odtr(as.data.frame(observed), sem, 1, sl, sl, "binomial")
-    #plan(sequential)
+    d <- optimal_rule(as.data.frame(observed), sem, 1, sl, sl, "binomial")
     
     ds[[node]] <- d
-    # saveRDS(d, glue("data/drv/optimal-rule-{med}-week{tau+1}_{node}.rds"))
 }
+
+saveRDS(ds, glue("data/drv/optimal-rule-vSL-{med}-week{tau+1}_{node}.rds"))
 
 for (node in 1:5) {
     W <- c(demog, comorbidities)
@@ -63,7 +61,7 @@ for (node in 1:5) {
     observed <- left_join(visits_wide, baseline)
     observed <- observed[as.character(observed$medicine) == task$med, ]
     
-    d <- readRDS(glue("data/drv/optimal-rule-{med}-week{tau+1}_{node}.rds"))
+    d <- readRDS(glue("data/drv/optimal-rule-vSL-{med}-week{tau+1}_{node}.rds"))
     
     shifted <- as.data.frame(observed)
     for (a in colnames(d$A_opt)) {
@@ -80,5 +78,5 @@ for (node in 1:5) {
         learners_trt = sl
     )
     
-    saveRDS(sdr, glue("data/drv/optimal-rule-{med}-week{tau+1}-lmtp-{node}.rds"))
+    saveRDS(sdr, glue("data/drv/optimal-rule-vSL-{med}-week{tau+1}-lmtp-{node}.rds"))
 }

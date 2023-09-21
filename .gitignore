@@ -1,6 +1,7 @@
 .Rproj.user
 ._*
-data/
+_research/paper_analysis/data/
+_research/sim/data/
 bin
 *.docx
 .DS_Store

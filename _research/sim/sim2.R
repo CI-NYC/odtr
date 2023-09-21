@@ -7,6 +7,7 @@ id <- Sys.getenv("SGE_TASK_ID")
 if (id == "undefined" || id == "") id <- 1
 
 learners <- c("SL.nnet", "SL.earth", "SL.gam", "SL.bayesglm", "SL.glm.interaction", "SL.glm")
+learners <- "glm"
 
 L <- list(c("W1", "W2"), c("W3"))
 vars <- Vars$new(L = L, A = c("A1", "A2"), Y = "Y")
