@@ -1,4 +1,4 @@
-crossFitQ <- function(data, g, Vars, learners, folds, 
+crossFitQ <- function(data, g, Vars, learners, learners_rule, folds, 
                       outcome_type = c("binomial", "continuous"), maximize = TRUE) {
     tau <- length(Vars$A)
     
@@ -7,6 +7,8 @@ crossFitQ <- function(data, g, Vars, learners, folds,
     m[, tau + 1] <- data[[Vars$Y]]
 
     A_opt <- matrix(nrow = nrow(data), ncol = tau)
+    
+    fits <- lapply(1:tau, function(x) vector("list", length = length(folds)))
 
     for (v in seq_along(folds)) {
         Q0 <- lapply(1:3, function(x) matrix(nrow = nrow(data), ncol = tau))
@@ -38,10 +40,13 @@ crossFitQ <- function(data, g, Vars, learners, folds,
             train1 <- train0 <- train
             train0[[Vars$A[t]]] <- 0
             train1[[Vars$A[t]]] <- 1
-
-            fit <- crossFit(train[art, ], 
-                            list(train[art, ], train0[art, ], train1[art, ], valid[arv, ]), 
-                            y, vars, type, learners, TRUE)
+            
+            fit <- mlr3superlearner(train[art, c(y, vars)],
+                                    y, 
+                                    learners, 
+                                    type, 
+                                    folds = NULL, 
+                                    newdata = list(train[art, ], train0[art, ], train1[art, ], valid[arv, ]))
             
             Q0[[1]][ti, ][art, t] <- fit$preds[[1]]
             Q0[[1]][ti, ][!art, t] <- 0
@@ -55,46 +60,48 @@ crossFitQ <- function(data, g, Vars, learners, folds,
             vars <- setdiff(vars, Vars$A[t])
             train <- cbind(train[, vars, drop = F], 
                            tmp_pseudo_blip_D = 
-                               transform(tr(g, folds[[v]]), 
-                                         t, 
-                                         train[, Vars$A, drop = F], 
-                                         tr(A_optt, folds[[v]]), 
-                                         tr(m, folds[[v]]), 
-                                         tr(Q0[[1]], folds[[v]]), 
-                                         tr(Q0[[2]], folds[[v]]), 
-                                         tr(Q0[[3]], folds[[v]])))
+                               transform_sdr(tr(g, folds[[v]]), 
+                                             t, 
+                                             train[, Vars$A, drop = F], 
+                                             tr(A_optt, folds[[v]]), 
+                                             tr(m, folds[[v]]), 
+                                             tr(Q0[[1]], folds[[v]]), 
+                                             tr(Q0[[2]], folds[[v]]), 
+                                             tr(Q0[[3]], folds[[v]])))
             
-            mtilde <- crossFit(train[art, ], 
-                               list(valid[arv, ], train[art, ]), 
-                               "tmp_pseudo_blip_D", 
-                               vars, 
-                               "continuous", 
-                               learners)
+            mtilde <- mlr3superlearner(train[art, c("tmp_pseudo_blip_D", vars)],
+                                       "tmp_pseudo_blip_D", 
+                                       learners_rule, 
+                                       "continuous", 
+                                       folds = NULL, 
+                                       newdata = list(valid[arv, ], train[art, ]))
             
+            fits[[t]][[v]] <- mtilde
+
             if (maximize) {
                 opt_trt <- function(x) ifelse(x > 0, 1, 0) 
             } else {
                 opt_trt <- function(x) ifelse(x < 0, 1, 0)
             }
             
-            A_opt[vi, ][arv, t] <- opt_trt(mtilde[[1]])
-            A_optt[ti, ][art, t] <- opt_trt(mtilde[[2]])
+            A_opt[vi, ][arv, t] <- opt_trt(mtilde$preds[[1]])
+            A_optt[ti, ][art, t] <- opt_trt(mtilde$preds[[2]])
             
             . <- data
             .[[Vars$A[t]]][vi][arv] <- A_opt[vi, t][arv]
             .[[Vars$A[t]]][ti][art] <- A_optt[ti, t][art]
             
-            mt[ti, ][art, t] <- predictt(fit$fit, .[ti, ][art, ])
+            mt[ti, ][art, t] <- predict(fit, .[ti, ][art, ])
             mt[ti, ][!art, t] <- 0
             
-            m[vi, ][arv, t] <- predictt(fit$fit, .[vi, ][arv, ])
+            m[vi, ][arv, t] <- predict(fit, .[vi, ][arv, ])
             m[vi, ][!arv, t] <- 0
         }
     }
-    list(A_opt = A_opt, m = m, Q_a = QA)
+    list(A_opt = A_opt, m = m, Q_a = QA, fits = fits)
 }
 
-transform <- function(g, t, A, Aopt, ytilde, QA, Q0, Q1) {
+transform_sdr <- function(g, t, A, Aopt, ytilde, QA, Q0, Q1) {
     tau <- ncol(QA)
     wts <- matrix(1, nrow = nrow(g), ncol = length(1:tau))
     
@@ -105,22 +112,16 @@ transform <- function(g, t, A, Aopt, ytilde, QA, Q0, Q1) {
             wts[is.na(wts[, s]), s] <- 0
         }
     }
-
+    
     wts <- apply(wts, 2, function(x) pmin(x, quantile(x, 0.99, na.rm = T)))
-    r <- ratio_sdr(wts, t, tau)
+    r <- compute_weights(wts, t, tau)
+    
     m <- ytilde[, (t + 1):(tau + 1), drop = FALSE] - QA[, t:tau, drop = FALSE]
-    eval1 <- rowSums(r * m, na.rm = TRUE) + Q1[, t] - Q0[, t]
-    # m <- rep(0, nrow(wts))
-    # for (s in t:tau) {
-    #     m <- m + (apply(wts[, t:s, drop = F], 1, prod) *
-    #                   (ytilde[, s + 1, drop = FALSE] - QA[, s, drop = FALSE]))
-    # }
-    # m <- m + (Q1[, t, drop = FALSE] - Q0[, t, drop = FALSE])
-    # eval2 <- as.vector(m)
-    eval1
+    rowSums(r * m, na.rm = TRUE) + Q1[, t] - Q0[, t]
 }
 
-ratio_sdr <- function(g, t, tau) {
-    if ((t + 1) > tau) return(g[, tau])
-    t(apply(g[, t:tau, drop = FALSE], 1, cumprod))
+compute_weights <- function(r, t, tau) {
+    out <- t(apply(r[, t:tau, drop = FALSE], 1, cumprod))
+    if (ncol(out) > ncol(r)) return(t(out))
+    out
 }

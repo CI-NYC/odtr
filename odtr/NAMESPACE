@@ -2,4 +2,4 @@
 
 S3method(print,odtr)
 export(Vars)
-export(optimal_rule)
+export(odtr)

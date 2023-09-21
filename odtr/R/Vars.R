@@ -16,7 +16,7 @@ Vars <- R6::R6Class(
             # }
             
             if (!missing(W)) {
-                checkmate::assertCharacter(W)
+                checkmate::assertCharacter(W, null.ok = TRUE)
                 self$W <- W
             }
             

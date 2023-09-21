@@ -10,9 +10,15 @@ crossFitg0 <- function(data, Vars, learners, folds) {
             train <- train[at_risk(train, Vars, t), ]
             risk <- at_risk(valid, Vars, t)
             valid <- valid[risk, ]
-        
-            fit <- crossFit(train, list(valid), Vars$A[t], Vars$history("A", t), "binomial", learners)
-            g0[folds[[v]]$validation_set[risk], t] <- pmax(pmin(fit[[1]], 1 - bnd), bnd)
+            
+            fit <- mlr3superlearner(train[, c(Vars$A[t], Vars$history("A", t))], 
+                                    Vars$A[t], 
+                                    learners, 
+                                    "binomial",
+                                    folds = NULL, 
+                                    newdata = list(valid))
+            preds <- fit$preds[[1]]
+            g0[folds[[v]]$validation_set[risk], t] <- pmax(pmin(preds, 1 - bnd), bnd)
         } 
     }
     g0
