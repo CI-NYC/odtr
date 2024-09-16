@@ -6,7 +6,7 @@ suppressPackageStartupMessages(library(tidyverse))
 
 load_all("odtr")
 
-source("_research/covariates.R")
+source("_research/paper_analysis/covariates.R")
 
 visits_wide <- readRDS("data/src/clean_weeks_with_relapse_wide_080922.rds")
 imputed <- readRDS("data/src/clean_patients_imputed_080922.rds")

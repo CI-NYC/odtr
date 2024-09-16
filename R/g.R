@@ -14,6 +14,7 @@ crossFitg0 <- function(data, Vars, learners, folds) {
             fit <- mlr3superlearner(train[, c(Vars$A[t], Vars$history("A", t))], 
                                     Vars$A[t], 
                                     learners, 
+                                    NULL,
                                     "binomial",
                                     folds = NULL, 
                                     newdata = list(valid))

@@ -13,6 +13,7 @@
 #'  A \code{mlr3superlearner} library
 #' @param learners_rule \[\code{character}\]\cr 
 #'  A \code{mlr3superlearner} library
+#' @param filters_rule
 #' @param folds \[\code{integer}\]\cr
 #'  Number of folds for cross-fitting
 #' @param outcome_type \[\code{character(1)}\]\cr
@@ -26,6 +27,7 @@
 #' @examples
 odtr <- function(data, trt, outcome, baseline, time_varying, 
                  learners_trt = "glm", learners_outcome = "glm", learners_rule = "glm",
+                 filters_rule = NULL,
                  folds, outcome_type = c("binomial", "continuous"), maximize = TRUE) {
     task <- odtr_Vars$new(baseline, time_varying, trt, outcome)
     
@@ -39,9 +41,10 @@ odtr <- function(data, trt, outcome, baseline, time_varying,
         }
     }
     
-    folds <- make_folds(tmp, folds)
+    folds <- make_folds(tmp, folds, tmp[[task$Y]])
     g0 <- crossFitg0(tmp, task, learners_trt, folds)
-    vals <- crossFitQ(tmp, g0, task, learners_outcome, learners_rule, folds, match.arg(outcome_type), maximize)
+    vals <- crossFitQ(tmp, g0, task, learners_outcome, learners_rule, 
+                      filters_rule, folds, match.arg(outcome_type), maximize)
 
     colnames(vals$A_opt) <- task$A
     inflnce <- eif(data[, task$A, drop = F], vals$A_opt, g0, vals$m, vals$Q_a)

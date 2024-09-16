@@ -17,7 +17,6 @@ Imports:
     checkmate,
     data.table,
     glue,
-    SuperLearner,
     origami,
     R6
 Depends: 

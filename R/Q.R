@@ -1,4 +1,4 @@
-crossFitQ <- function(data, g, Vars, learners, learners_rule, folds, 
+crossFitQ <- function(data, g, Vars, learners, learners_rule, filters_rule, folds, 
                       outcome_type = c("binomial", "continuous"), maximize = TRUE) {
     tau <- length(Vars$A)
     
@@ -44,6 +44,7 @@ crossFitQ <- function(data, g, Vars, learners, learners_rule, folds,
             fit <- mlr3superlearner(train[art, c(y, vars)],
                                     y, 
                                     learners, 
+                                    NULL,
                                     type, 
                                     folds = NULL, 
                                     newdata = list(train[art, ], train0[art, ], train1[art, ], valid[arv, ]))
@@ -72,6 +73,10 @@ crossFitQ <- function(data, g, Vars, learners, learners_rule, folds,
             mtilde <- mlr3superlearner(train[art, c("tmp_pseudo_blip_D", vars)],
                                        "tmp_pseudo_blip_D", 
                                        learners_rule, 
+                                       filters_rule,
+                                       # mlr3pipelines::po("filter", 
+                                       #                   filter = mlr3filters::flt("mim"), 
+                                       #                   filter.nfeat = 5),
                                        "continuous", 
                                        folds = NULL, 
                                        newdata = list(valid[arv, ], train[art, ]))
