@@ -16,5 +16,5 @@ AutoAppendNewline: Yes
 
 BuildType: Package
 PackageUseDevtools: Yes
-PackagePath: pkg
+PackagePath: /Users/nicholaswilliams/Library/CloudStorage/OneDrive-ColumbiaUniversityIrvingMedicalCenter/sdaepi/odtr
 PackageInstallArgs: --no-multiarch --with-keep.source
